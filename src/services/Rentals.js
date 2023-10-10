@@ -7,6 +7,12 @@ export default {
   read: () => {
     return http.get("Rentals/");
   },
+  selectBooksRead: () => {
+    return http.get("Rentals/selectBooks");
+  },
+  selectUsersRead: () => {
+    return http.get("Rentals/selectUsers");
+  },
   update: (rental) => {
     return http.put(`Rentals/`, rental);
   },

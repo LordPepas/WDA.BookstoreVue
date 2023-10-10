@@ -132,10 +132,10 @@ export default {
           Rentals.read(),
         ]);
 
-        this.lists[0].count = users.data.length;
-        this.lists[1].count = publishers.data.length;
-        this.lists[2].count = books.data.length;
-        this.lists[3].count = rentals.data.length;
+        this.lists[0].count = users.data.data.length;
+        this.lists[1].count = publishers.data.data.length;
+        this.lists[2].count = books.data.data.length;
+        this.lists[3].count = rentals.data.data.length;
 
         const lastRental = rentals.data.reduce((prev, current) => {
           return prev.id < current.id ? current : prev;

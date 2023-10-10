@@ -7,6 +7,9 @@ export default {
   read: () => {
     return http.get("Books/");
   },
+  selectPublishers: () => {
+    return http.get("Books/selectPublishers");
+  },
   update: (book) => {
     return http.put(`Books/`, book);
   },

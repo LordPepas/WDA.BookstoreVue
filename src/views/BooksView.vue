@@ -165,7 +165,6 @@
 </template>
 
 <script>
-import Publishers from "@/services/Publishers";
 import Swal from "sweetalert2";
 import Books from "@/services/Books";
 
@@ -290,7 +289,7 @@ export default {
     /* READ */
     async listBooks() {
       try {
-        const publisherResponse = await Publishers.read();
+        const publisherResponse = await Books.selectPublishers();
         this.listPublishers = publisherResponse.data.data.map((publisher) => ({
           id: publisher.id,
           name: publisher.name,
@@ -483,7 +482,6 @@ export default {
 
       if (result.isConfirmed) {
         this.listBooks();
-        this.closeModal();
         try {
           await Books.delete(deleteBook);
           await Swal.fire({
