@@ -4,16 +4,21 @@ export default {
   create: (book) => {
     return http.post("Books", book);
   },
-  read: () => {
-    return http.get("Books/");
-  },
-  selectPublishers: () => {
-    return http.get("Books/selectPublishers");
+  read: (params) => {
+    return http.get("Books", {
+      params: {
+        PageNumber: params.pageNumber,
+        PageSize: params.pageSize,
+        OrderBy: params.orderBy,
+        OrderDesc: params.orderDesc,
+        SearchValue: params.searchValue,
+      },
+    });
   },
   update: (book) => {
     return http.put(`Books/`, book);
   },
   delete: (book) => {
-    return http.delete(`Books/${book.id}`);
+    return http.delete(`Books/${book}`);
   },
 };

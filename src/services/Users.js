@@ -4,8 +4,16 @@ export default {
   create: (user) => {
     return http.post("Users", user);
   },
-  read: () => {
-    return http.get("Users/");
+  read: (params) => {
+    return http.get("Users", {
+      params: {
+        PageNumber: params.pageNumber,
+        PageSize: params.pageSize,
+        OrderBy: params.orderBy,
+        OrderDesc: params.orderDesc,
+        SearchValue: params.searchValue,
+      },
+    });
   },
   update: (user) => {
     return http.put(`Users/`, user);

@@ -4,14 +4,16 @@ export default {
   create: (rental) => {
     return http.post("Rentals", rental);
   },
-  read: () => {
-    return http.get("Rentals/");
-  },
-  selectBooksRead: () => {
-    return http.get("Rentals/selectBooks");
-  },
-  selectUsersRead: () => {
-    return http.get("Rentals/selectUsers");
+  read: (params) => {
+    return http.get("Books", {
+      params: {
+        PageNumber: params.pageNumber,
+        PageSize: params.pageSize,
+        OrderBy: params.orderBy,
+        OrderDesc: params.orderDesc,
+        SearchValue: params.searchValue,
+      },
+    });
   },
   update: (rental) => {
     return http.put(`Rentals/`, rental);

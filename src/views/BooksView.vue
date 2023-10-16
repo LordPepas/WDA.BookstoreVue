@@ -1,8 +1,8 @@
 <template>
   <div class="d-flex flex-column justify-end align-end mt-2">
     <v-container>
-      <v-row class="d-flex align-center" xs="vertical-center">
-        <v-col cols="auto" class="ml-2">
+      <v-row class="d-flex align-center">
+        <v-col cols="auto ml-2">
           <v-toolbar-title class="font-weight-medium" style="font-size: 30px"
             >Livros</v-toolbar-title
           >
@@ -10,7 +10,7 @@
         <v-col cols="auto" class="d-flex align-center mb-0">
           <img src="@/assets/divider.svg" />
         </v-col>
-        <v-col cols="">
+        <v-col cols="auto">
           <v-btn
             class="rounded-lg px-0 v-btn v-btn--has-bg theme--dark"
             color="blue darken-3"
@@ -38,15 +38,21 @@
         </v-col>
       </v-row>
 
+      <!-- Tabela de Dados -->
       <v-data-table
         :headers="headers"
-        :items="filteredBooks"
-        :sort-by="['id']"
-        :sort-desc="[false, true]"
-        multi-sort
+        :items="booksData"
+        multi-sort-key="yourSortKey"
+        :header-props="headerProps"
+        :sort-desc="params.orderDesc"
+        :sort-by="params.orderBy"
+        :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
+        multi-sorts
+        :page="currentPage"
+        @update:options="handleOptionsUpdate"
         :footer-props="{
-          itemsPerPageOptions: [5, 10, 25, 50],
+          itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
         mobile-breakpoint="820"
@@ -63,9 +69,8 @@
                 color="info"
                 @click="openModalUpdate(item)"
                 v-on="on"
+                >mdi-notebook-edit-outline</v-icon
               >
-                mdi-notebook-edit-outline
-              </v-icon>
             </template>
             <span>Editar Livro</span>
           </v-tooltip>
@@ -77,14 +82,14 @@
                 color="error"
                 @click="openModalDelete(item)"
                 v-on="on"
+                >mdi-trash-can-outline</v-icon
               >
-                mdi-trash-can-outline
-              </v-icon>
             </template>
             <span>Excluir Livro</span>
           </v-tooltip>
         </template>
       </v-data-table>
+
       <!-- FORM CREATE/UPDATE -->
       <v-row justify="center">
         <v-dialog v-model="dialogVisible" max-width="600px" persistent>
@@ -123,8 +128,8 @@
                   no-data-text="Nenhuma editora encontrado"
                 ></v-autocomplete>
                 <v-text-field
-                  v-model="launch"
-                  :rules="launchRules"
+                  v-model="release"
+                  :rules="releaseRules"
                   label="Data de lançamento"
                   :counter="4"
                   type="number"
@@ -167,22 +172,33 @@
 <script>
 import Swal from "sweetalert2";
 import Books from "@/services/Books";
+import Publisher from "@/services/Publishers";
 
 export default {
   data() {
     return {
-      fetchBook: [],
+      booksData: [],
       listPublishers: [],
+      params: {
+        searchValue: "",
+        orderBy: "id",
+        orderDesc: false,
+        pageNumber: null,
+        pageSize: null,
+      },
       search: "",
       name: "",
       publishers: "",
       author: "",
       quantity: "",
-      launch: "",
+      release: "",
       dialogVisible: false,
       submitButtonLabel: "",
       selectedBookId: null,
       isSubmitDisabled: true,
+      headerProps: {
+        sortByText: "Ordenar Por",
+      },
       headers: [
         {
           text: "ID",
@@ -212,7 +228,7 @@ export default {
         },
         {
           text: "Lançamento",
-          value: "launch",
+          value: "release",
           align: "center",
           class: "text-md-body-1 font-weight-bold ",
         },
@@ -238,14 +254,20 @@ export default {
       ],
       nameRules: [
         (v) => !!v || "O título é obrigatório",
-        (v) => v.length <= 45 || "O título deve ter no máximo 45 caracteres",
+        (v) =>
+          (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 45) || "O título deve ter no máximo 45 caracteres",
       ],
       authorRules: [
         (v) => !!v || "O autor é obrigatório",
-        (v) => v.length <= 50 || "O autor deve ter no máximo 50 caracteres",
+        (v) =>
+          (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 50) || "O autor deve ter no máximo 50 caracteres",
       ],
       publishersRules: [(v) => !!v || "A editora é obrigatório"],
-      launchRules: [
+      releaseRules: [
         (v) => !!v || "O lançamento é obrigatório",
         (v) => /^\d{4}$/.test(v) || "Formato de data inválido (YYYY)",
       ],
@@ -255,32 +277,25 @@ export default {
         (v) => v <= 100 || "A quantidade deve ser menor que cem",
       ],
       currentPage: 1,
+      totalItems: 0,
+      totalPages: 0,
+      sortBy: "",
       itemsPerPage: 5,
     };
   },
   created() {
     this.listBooks();
   },
-  computed: {
-    filteredBooks() {
-      const searchValue = this.search.toLowerCase();
-      return this.fetchBook.filter((book) => {
-        for (const prop in book) {
-          const propValue = book[prop].toString().toLowerCase();
-          if (propValue.includes(searchValue)) {
-            return true;
-          }
+  watch: {
+    search: {
+      handler(newSearch, oldSearch) {
+        if (newSearch !== oldSearch) {
+          this.params.pageNumber = 1;
+          this.params.searchValue = newSearch;
+          this.listBooks();
         }
-        return false;
-      });
-    },
-    totalPages() {
-      return Math.ceil(this.filteredBooks.length / this.itemsPerPage);
-    },
-    paginatedBooks() {
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-      const endIndex = startIndex + this.itemsPerPage;
-      return this.filteredBooks.slice(startIndex, endIndex);
+      },
+      deep: false,
     },
   },
   methods: {
@@ -289,25 +304,46 @@ export default {
     /* READ */
     async listBooks() {
       try {
-        const publisherResponse = await Books.selectPublishers();
+        const publisherResponse = await Publisher.readSummary();
         this.listPublishers = publisherResponse.data.data.map((publisher) => ({
           id: publisher.id,
           name: publisher.name,
         }));
 
-        const booksResponse = await Books.read();
-        this.fetchBook = booksResponse.data.data.map((book) => ({
+        const booksResponse = await Books.read(this.params);
+        this.booksData = booksResponse.data.data.map((book) => ({
           id: book.id,
           name: book.name,
           author: book.author,
           publisher: book.publisher.name,
-          launch: book.launch,
+          release: book.release,
           quantity: book.quantity,
           rented: book.rented,
         }));
+        this.totalItems = booksResponse.data.header.totalItems;
+        this.totalPages = booksResponse.data.header.totalPages;
       } catch (error) {
         console.error("Erro ao buscar editoras e livros:", error);
       }
+    },
+
+    generateItemsPerPageOptions() {
+      if (this.totalPages > 25) {
+        return [1, 10, 25, this.totalPages];
+      } else {
+        return [1, 10, 25];
+      }
+    },
+
+    handleOptionsUpdate(options) {
+      this.params.orderBy = options.sortBy[0];
+      this.params.orderDesc = options.sortDesc[0];
+      this.params.pageSize = options.itemsPerPage;
+      this.params.pageNumber = options.page;
+
+      this.currentpage = options.page;
+      this.itemsPerPage = this.params.pageSize;
+      this.listBooks();
     },
 
     /* CREATE/UPDATE */
@@ -319,7 +355,7 @@ export default {
       (this.selectedBookId = null), (this.name = "");
       this.author = "";
       this.publishers = "";
-      this.launch = "";
+      this.release = "";
       this.quantity = "";
       this.dialogVisible = false;
       this.resetValidation();
@@ -348,7 +384,7 @@ export default {
         (publisher) => publisher.name === book.publisher
       );
       this.publishers = selectedPublisher.name;
-      this.launch = book.launch;
+      this.release = book.release;
       this.quantity = book.quantity;
     },
 
@@ -362,20 +398,19 @@ export default {
         const selectedPublisher = await this.listPublishers.find(
           (publisher) => publisher.name === this.publishers
         );
-        console.log(selectedPublisher, this.publishers);
         const bookData = {
           name: this.name,
           author: this.author,
           publisherId: selectedPublisher.id,
-          launch: this.launch,
+          release: this.release,
           quantity: this.quantity,
         };
 
         try {
-          if (!this.selectedBookId) {
+          if (this.selectedBookId == null) {
             try {
               const response = await Books.create(bookData);
-              this.fetchBook.push({ id: response.data.data.id, ...bookData });
+              this.booksData.push({ id: response.data.id, ...bookData });
               this.closeModal();
               this.listBooks();
               Swal.fire({
@@ -391,7 +426,7 @@ export default {
               Swal.fire({
                 icon: "error",
                 title: "Erro ao adicionar Livro",
-                text: error.response.data.message,
+                text: error.response.data.errors,
                 showConfirmButton: false,
                 toast: true,
                 position: "top-end",
@@ -408,7 +443,7 @@ export default {
               this.closeModal();
               this.listBooks();
               await Books.update(update);
-              this.fetchBook = this.fetchBook.map((book) => {
+              this.booksData = this.booksData.map((book) => {
                 if (book.id === update.id) {
                   return { ...book, ...update };
                 } else {
@@ -425,13 +460,10 @@ export default {
                 timerProgressBar: true,
               });
             } catch (error) {
-              const errorMessages = error.response.data.errors
-                .map((error) => error.message)
-                .join("\n");
               Swal.fire({
                 icon: "error",
                 title: error.response.data.message,
-                text: errorMessages,
+                text: error.response.data.errors,
                 showConfirmButton: false,
                 toast: true,
                 position: "top-end",
@@ -444,7 +476,7 @@ export default {
           Swal.fire({
             icon: "error",
             title: "Erro ao realizar ação",
-            text: error.response.data.error,
+            text: error.response.data.message,
             showConfirmButton: false,
             toast: true,
             position: "top-end",
@@ -457,36 +489,31 @@ export default {
 
     /* DELETE */
     async openModalDelete(book) {
-      const selectedPublisher = this.listPublishers.find(
-        (publisher) => publisher.name === book.publisher
-      );
-      const deleteBook = {
-        id: book.id,
-        name: book.nome,
-        author: book.autor,
-        publisher: selectedPublisher.id,
-        launch: book.launch,
-        quantity: book.quantity,
-        rented: book.rented,
-      };
+      console.log(this.params.pageNumber);
       const result = await Swal.fire({
         icon: "warning",
-        title: `Deseja excluir o Livro</br> ${deleteBook.name} ? `,
+        title: `Deseja excluir o livro ${book.name} ?`,
         text: "Essa ação não pode ser desfeita!",
         showCancelButton: true,
-        confirmButtonText: "Excluir!",
+        confirmButtonText: "Excluir",
         cancelButtonText: "Cancelar",
         confirmButtonColor: "#5FA7D7",
         cancelButtonColor: "#E57373",
       });
 
       if (result.isConfirmed) {
-        this.listBooks();
         try {
-          await Books.delete(deleteBook);
-          await Swal.fire({
+          await Books.delete(book.id);
+          if (this.booksData.length === 1) {
+            if (this.params.pageNumber > 1) {
+              this.currentPage -= 1;
+              location.reload();
+            }
+          }
+          this.listBooks();
+          Swal.fire({
             icon: "success",
-            title: "Livro Excluída com Sucesso!",
+            title: "Livro excluído com sucesso!",
             showConfirmButton: false,
             timer: 2000,
             toast: true,
@@ -494,17 +521,14 @@ export default {
             timerProgressBar: true,
           });
         } catch (error) {
-          const errorMessages = error.response.data.errors
-            .map((error) => error.message)
-            .join("\n");
           Swal.fire({
             icon: "error",
-            title: error.response.data.message,
-            text: errorMessages,
+            title: "Erro ao excluir o livro",
+            text: error.response.data.errors, // Certifique-se de que a mensagem de erro esteja acessível
             showConfirmButton: false,
-            timer: 3000,
             toast: true,
             position: "top-end",
+            timer: 3000,
             timerProgressBar: true,
           });
         }

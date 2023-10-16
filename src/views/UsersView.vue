@@ -38,19 +38,20 @@
         </v-col>
       </v-row>
 
+      <!-- Tabela de Dados -->
       <v-data-table
-        min-width="690px"
-        overflow-x="hidden"
-        overflow-y="hidden"
         :headers="headers"
-        :items="filteredUsers"
-        :sort-by="['id']"
-        :sort-desc="[false, true]"
-        multi-sort
-        :items-per-page="itemsPerPage"
+        :items="usersData"
         :header-props="headerProps"
+        :sort-desc="params.orderDesc"
+        :sort-by="params.orderBy"
+        :page="currentPage"
+        :server-items-length="totalItems"
+        :items-per-page="itemsPerPage"
+        @update:options="handleOptionsUpdate"
+        multi-sorts
         :footer-props="{
-          itemsPerPageOptions: [5, 10, 25, 50],
+          itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
         mobile-breakpoint="820"
@@ -67,9 +68,7 @@
                 color="info"
                 @click="openModalUpdate(item)"
                 v-on="on"
-              >
-                mdi-account-edit-outline
-              </v-icon>
+              > mdi-account-edit-outline</v-icon>
             </template>
             <span>Editar Usuário</span>
           </v-tooltip>
@@ -81,17 +80,15 @@
                 color="error"
                 @click="openModalDelete(item)"
                 v-on="on"
-              >
-                mdi-trash-can-outline
-              </v-icon>
+                >mdi-trash-can-outline</v-icon>
             </template>
             <span>Excluir Usuário</span>
           </v-tooltip>
         </template>
       </v-data-table>
 
+      <!-- FORM CREATE/UPDATE -->
       <v-row justify="center">
-        <!-- FORM CREATE/UPDATE -->
         <v-dialog v-model="dialogVisible" max-width="600px" persistent>
           <v-card>
             <v-card-title>
@@ -159,7 +156,14 @@ import Swal from "sweetalert2";
 export default {
   data() {
     return {
-      listUser: [],
+      usersData: [],
+      params: {
+        searchValue: "",
+        orderBy: "id",
+        orderDesc: false,
+        pageNumber: null,
+        pageSize: null,
+      },
       search: "",
       name: "",
       email: "",
@@ -172,23 +176,6 @@ export default {
       headerProps: {
         sortByText: "Ordenar Por",
       },
-      nameRules: [
-        (v) => !!v || "O nome é obrigatório",
-        (v) => v.length <= 45 || "O nome deve ter no máximo 45 caracteres",
-      ],
-      emailRules: [
-        (v) => !!v || "O email é obrigatório",
-        (v) => v.length <= 120 || "O email deve ter no máximo 120 caracteres",
-        (v) => this.isValidEmail(v) || "Formato de email inválido",
-      ],
-      cityRules: [
-        (v) => !!v || "A cidade é obrigatória",
-        (v) => v.length <= 25 || "A cidade deve ter no máximo 25 caracteres",
-      ],
-      addressRules: [
-        (v) => !!v || "O endereço é obrigatório",
-        (v) => v.length <= 50 || "O endereço deve ter no máximo 50 caracteres",
-      ],
       headers: [
         {
           text: "ID",
@@ -196,7 +183,6 @@ export default {
           sortable: true,
           value: "id",
           class: "text-md-body-1 font-weight-bold ",
-          padding: "8",
         },
         {
           text: "Nome",
@@ -225,33 +211,53 @@ export default {
           class: "text-md-body-1 font-weight-bold ",
         },
       ],
+      nameRules: [
+        (v) => !!v || "O nome é obrigatório",
+        (v) =>
+          (v && v.length >= 3) || "O nome deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 45) || "O nome deve ter no máximo 45 caracteres",
+      ],
+      emailRules: [
+        (v) => !!v || "O email é obrigatório",
+        (v) =>
+          (v && v.length <= 120) || "O email deve ter no máximo 120 caracteres",
+        (v) => this.isValidEmail(v) || "Formato de email inválido",
+      ],
+      cityRules: [
+        (v) => !!v || "A cidade é obrigatória",
+        (v) =>
+          (v && v.length >= 3) || "A cidade deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 25) || "A cidade deve ter no máximo 25 caracteres",
+      ],
+      addressRules: [
+        (v) => !!v || "O endereço é obrigatório",
+        (v) =>
+          (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 50) || "O endereço deve ter no máximo 50 caracteres",
+      ],
       currentPage: 1,
       itemsPerPage: 5,
+      totalItems: null,
+      totalPages:null,
+      sortBy: "",
     };
   },
-  created() {
+  mounted() {
     this.listUsers();
   },
-  computed: {
-    filteredUsers() {
-      const searchValue = this.search.toLowerCase();
-      return this.listUser.filter((usuario) => {
-        for (const prop in usuario) {
-          const propValue = usuario[prop].toString().toLowerCase();
-          if (propValue.includes(searchValue)) {
-            return true;
-          }
+  watch: {
+    search: {
+      handler(newSearch, oldSearch) {
+        if (newSearch !== oldSearch) {
+          this.params.pageNumber = 1;
+          this.params.searchValue = newSearch;
+          this.listUsers();
         }
-        return false;
-      });
-    },
-    totalPages() {
-      return Math.ceil(this.filteredUsers.length / this.itemsPerPage);
-    },
-    paginatedUsers() {
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-      const endIndex = startIndex + this.itemsPerPage;
-      return this.filteredUsers.slice(startIndex, endIndex);
+      },
+      deep: false,
     },
   },
   methods: {
@@ -259,15 +265,36 @@ export default {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(email);
     },
+
+    generateItemsPerPageOptions() {
+      if (this.totalPages > 25) {
+        return [5, 10, 25, this.totalPages];
+      } else {
+        return [5, 10, 25];
+      }
+    },
+
+    handleOptionsUpdate(options) {
+      this.params.orderBy = options.sortBy[0];
+      this.params.orderDesc = options.sortDesc[0];
+      this.params.pageSize = options.itemsPerPage;
+      this.params.pageNumber = options.page;
+
+      this.itemsPerPage = this.params.pageSize;
+      this.listUsers();
+      console.log(this.params);
+    },
     /* ===== CRUD ===== */
 
     /* READ */
     async listUsers() {
       try {
-        const response = await Users.read();
-        this.listUser = response.data.data;
+        const response = await Users.read(this.params);
+        this.usersData = response.data.data;
+        this.totalItems = response.data.header.totalItems;
+        this.totalPages = response.data.header.totalPages
       } catch (error) {
-        console.error("Erro ao buscar usuários:", error);
+        console.error("Erro ao buscar editoras:", error);
       }
     },
 
@@ -326,7 +353,7 @@ export default {
         if (!this.selectedUserId) {
           try {
             const response = await Users.create(userData);
-            this.listUser.push({ id: response.data.id, ...userData });
+            this.usersData.push({ id: response.data.id, ...userData });
             this.closeModal();
             this.listUsers();
             Swal.fire({
@@ -342,7 +369,7 @@ export default {
             Swal.fire({
               icon: "error",
               title: "Erro ao adicionar Usuário",
-              text: error.response.data.error,
+              text: error.response.data.errors,
               showConfirmButton: false,
               toast: true,
               position: "top-end",
@@ -357,7 +384,7 @@ export default {
           };
           try {
             await Users.update(updateUser);
-            this.listUser = this.listUser.map((user) => {
+            this.usersData = this.usersData.map((user) => {
               if (user.id === updateUser.id) {
                 return updateUser;
               } else {
@@ -379,7 +406,7 @@ export default {
             Swal.fire({
               icon: "error",
               title: "Erro ao atualizar Usuário",
-              text: error.response.data.error,
+              text: error.response.data.errors,
               showConfirmButton: false,
               toast: true,
               position: "top-end",
@@ -407,7 +434,12 @@ export default {
       if (result.isConfirmed) {
         try {
           await Users.delete(user);
-          this.closeModal();
+          if (this.usersData.length === 1) {
+            if (this.params.pageNumber > 1) {
+              this.currentPage -= 1;
+              location.reload();
+            }
+          }
           this.listUsers();
           Swal.fire({
             icon: "success",
@@ -422,7 +454,7 @@ export default {
           Swal.fire({
             icon: "error",
             title: "Erro ao Excluir Usuário",
-            text: error.response.data.error,
+            text: error.response.data.errors,
             showConfirmButton: false,
             timer: 3000,
             toast: true,

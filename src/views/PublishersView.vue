@@ -2,7 +2,7 @@
   <div class="d-flex flex-column justify-end align-end mt-2">
     <v-container>
       <v-row class="d-flex align-center">
-        <v-col cols="auto ml-2">
+        <v-col cols="auto">
           <v-toolbar-title class="font-weight-medium" style="font-size: 30px"
             >Editoras</v-toolbar-title
           >
@@ -10,7 +10,6 @@
         <v-col cols="auto" class="d-flex align-center mb-0">
           <img src="@/assets/divider.svg" />
         </v-col>
-
         <v-col cols="auto">
           <v-btn
             class="rounded-lg px-0 v-btn v-btn--has-bg theme--dark"
@@ -39,16 +38,20 @@
         </v-col>
       </v-row>
 
+      <!-- Tabela de Dados -->
       <v-data-table
         :headers="headers"
-        :items="filteredPublishers"
-        :sort-by="['id']"
+        :items="publishersData"
         :header-props="headerProps"
-        :sort-desc="[false, true]"
-        multi-sort
+        :sort-desc="params.orderDesc"
+        :sort-by="params.orderBy"
+        :page="currentPage"
+        :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
+        @update:options="handleOptionsUpdate"
+        multi-sort
         :footer-props="{
-          itemsPerPageOptions: [5, 10, 25, 50],
+          itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
         mobile-breakpoint="820"
@@ -65,9 +68,8 @@
                 color="info"
                 @click="openModalUpdate(item)"
                 v-on="on"
+                >mdi-storefront-edit-outline</v-icon
               >
-                mdi-storefront-edit-outline
-              </v-icon>
             </template>
             <span>Editar Editora</span>
           </v-tooltip>
@@ -79,28 +81,22 @@
                 color="error"
                 @click="openModalDelete(item)"
                 v-on="on"
+                >mdi-trash-can-outline</v-icon
               >
-                mdi-trash-can-outline
-              </v-icon>
             </template>
             <span>Excluir Editora</span>
           </v-tooltip>
         </template>
-
-        <template v-slot:[`item.editora`]="{ item }">
-          {{ item.editora.nome }}
-        </template>
       </v-data-table>
+
+      <!-- FORM Create/Update -->
       <v-row justify="center">
-        <!-- FORM CREATE/UPDATE -->
         <v-dialog v-model="dialogVisible" max-width="600px" persistent>
           <v-card>
             <v-card-title>
-              <span class="text-h5">
-                {{
-                  selectedPublisherId ? "Editar editora" : "Adicionar editora"
-                }}
-              </span>
+              <span class="text-h5">{{
+                selectedPublisherId ? "Editar editora" : "Adicionar editora"
+              }}</span>
             </v-card-title>
             <v-card-text>
               <v-form ref="form" @submit.prevent="submitAction">
@@ -151,7 +147,14 @@ import Swal from "sweetalert2";
 export default {
   data() {
     return {
-      fetchPublisher: [],
+      publishersData: [],
+      params: {
+        searchValue: "",
+        orderBy: "id",
+        orderDesc: false,
+        pageNumber: null,
+        pageSize: null,
+      },
       search: "",
       name: "",
       city: "",
@@ -163,18 +166,18 @@ export default {
         sortByText: "Ordenar Por",
       },
       nameRules: [
-        (v) => (v !== undefined && v.length > 0) || "O nome é obrigatório",
+        (v) => !!v || "O nome é obrigatório",
         (v) =>
-          v === undefined ||
-          v.length <= 25 ||
-          "O nome deve ter no máximo 25 caracteres",
+          (v && v.length >= 3) || "O nome deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 25) || "O nome deve ter no máximo 25 caracteres",
       ],
       cityRules: [
-        (v) => (v !== undefined && v.length > 0) || "A cidade é obrigatória",
+        (v) => !!v || "A cidade é obrigatória",
         (v) =>
-          v === undefined ||
-          v.length <= 25 ||
-          "A cidade deve ter no máximo 25 caracteres",
+          (v && v.length >= 3) || "A cidade deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 25) || "A cidade deve ter no máximo 25 caracteres",
       ],
       headers: [
         {
@@ -182,62 +185,76 @@ export default {
           align: "start",
           sortable: true,
           value: "id",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Nome",
           value: "name",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Cidade",
           value: "city",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Ações",
           value: "actions",
           sortable: false,
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
       ],
+      totalItems: null,
+      totalPages: null,
+      sortBy: "",
       currentPage: 1,
       itemsPerPage: 5,
     };
   },
-  created() {
+  mounted() {
     this.listPublishers();
   },
-  computed: {
-    filteredPublishers() {
-      const searchValue = this.search.toLowerCase();
-      return this.fetchPublisher.filter((publisher) => {
-        for (const prop in publisher) {
-          const propValue = publisher[prop].toString().toLowerCase();
-          if (propValue.includes(searchValue)) {
-            return true;
-          }
+  watch: {
+    search: {
+      handler(newSearch, oldSearch) {
+        if (newSearch !== oldSearch) {
+          this.params.pageNumber = 1;
+          this.params.searchValue = newSearch;
+          this.listPublishers();
         }
-        return false;
-      });
-    },
-    totalPages() {
-      return Math.ceil(this.filteredPublishers.length / this.itemsPerPage);
-    },
-    paginatedPublishers() {
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-      const endIndex = startIndex + this.itemsPerPage;
-      return this.filteredPublishers.slice(startIndex, endIndex);
+      },
+      deep: false,
     },
   },
   methods: {
+    generateItemsPerPageOptions() {
+      if (this.totalPages > 25) {
+        return [5, 10, 25, this.totalPages];
+      } else {
+        return [5, 10, 25];
+      }
+    },
+
+    handleOptionsUpdate(options) {
+      this.params.orderBy = options.sortBy[0];
+      this.params.orderDesc = options.sortDesc[0];
+      this.params.pageSize = options.itemsPerPage;
+      this.params.pageNumber = options.page;
+
+      this.itemsPerPage = this.params.pageSize;
+      this.listPublishers();
+      console.log(this.params.pageSize);
+    },
     /* ===== CRUD ===== */
 
     /* READ */
     async listPublishers() {
       try {
-        const response = await Publisher.read();
-        this.fetchPublisher = response.data.data;
+        const response = await Publisher.read(this.params);
+
+        this.publishersData = response.data.data;
+        this.totalItems = response.data.header.totalItems;
+        this.totalPages = response.data.header.totalPages;
       } catch (error) {
         console.error("Erro ao buscar editoras:", error);
       }
@@ -292,8 +309,8 @@ export default {
         if (!this.selectedPublisherId) {
           try {
             const response = await Publisher.create(publisherData);
-            this.fetchPublisher.push({
-              id: response.data.data.id,
+            this.publishersData.push({
+              id: response.data.id,
               ...publisherData,
             });
             Swal.fire({
@@ -311,7 +328,7 @@ export default {
             Swal.fire({
               icon: "error",
               title: "Erro ao adicionar Editora",
-              text: error.response.data.error,
+              text: error.response.data.errors,
               showConfirmButton: false,
               toast: true,
               position: "top-end",
@@ -326,7 +343,7 @@ export default {
           };
           try {
             await Publisher.update(updatePublisher);
-            this.fetchPublisher = this.fetchPublisher.map((publisher) => {
+            this.publishersData = this.publishersData.map((publisher) => {
               if (publisher.id === updatePublisher.id) {
                 return updatePublisher;
               } else {
@@ -348,7 +365,7 @@ export default {
             Swal.fire({
               icon: "error",
               title: "Erro ao atualizar Editora",
-              text: error.response.data.error,
+              text: error.response.data.errors,
               showConfirmButton: false,
               toast: true,
               position: "top-end",
@@ -376,7 +393,11 @@ export default {
       if (result.isConfirmed) {
         try {
           await Publisher.delete(publisher);
-          this.closeModal();
+          if (this.publishersData.length === 1) {
+            if (this.params.pageNumber > 1) {
+              location.reload();
+            }
+          }
           this.listPublishers();
           await Swal.fire({
             icon: "success",
@@ -391,7 +412,7 @@ export default {
           await Swal.fire({
             icon: "error",
             title: "Erro ao Excluir Editora",
-            text: error.response.data.message,
+            text: error.response.data.errors,
             showConfirmButton: false,
             timer: 3000,
             toast: true,
