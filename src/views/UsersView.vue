@@ -49,7 +49,6 @@
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
         @update:options="handleOptionsUpdate"
-        multi-sorts
         :footer-props="{
           itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
@@ -162,7 +161,7 @@ export default {
         orderBy: "id",
         orderDesc: false,
         pageNumber: null,
-        pageSize: null,
+        itemsPerPage: null,
       },
       search: "",
       name: "",
@@ -277,10 +276,10 @@ export default {
     handleOptionsUpdate(options) {
       this.params.orderBy = options.sortBy[0];
       this.params.orderDesc = options.sortDesc[0];
-      this.params.pageSize = options.itemsPerPage;
+      this.params.itemsPerPage = options.itemsPerPage;
       this.params.pageNumber = options.page;
 
-      this.itemsPerPage = this.params.pageSize;
+      this.itemsPerPage = this.params.itemsPerPage;
       this.listUsers();
       console.log(this.params);
     },
@@ -291,8 +290,8 @@ export default {
       try {
         const response = await Users.read(this.params);
         this.usersData = response.data.data;
-        this.totalItems = response.data.header.totalItems;
-        this.totalPages = response.data.header.totalPages
+        this.totalItems = response.data.totalItems;
+        this.totalPages = response.data.totalPages
       } catch (error) {
         console.error("Erro ao buscar editoras:", error);
       }
@@ -328,10 +327,10 @@ export default {
 
     openModalUpdate(user) {
       this.selectedUserId = user.id;
-      this.name = user.nome;
+      this.name = user.name;
       this.email = user.email;
-      this.city = user.cidade;
-      this.address = user.endereco;
+      this.city = user.city;
+      this.address = user.address;
       this.dialogVisible = true;
       this.isSubmitDisabled = true;
       this.submitButtonLabel = "Atualizar";

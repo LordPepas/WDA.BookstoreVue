@@ -9,7 +9,7 @@
 
 <script>
 import Chart from "chart.js/auto";
-import Rentals from "@/services/Rentals";
+import Books from "@/services/Books";
 
 export default {
   data() {
@@ -22,36 +22,25 @@ export default {
   },
   methods: {
     async fetchTopThreeBooks() {
-      try {
-        const rentals = await Rentals.read();
+  try {
+    const rentals = await Books.MostRented();
 
-        const bookCount = {};
-        rentals.data.forEach((rental) => {
-          const livro_id = rental.livro_id.nome;
-          if (bookCount[livro_id]) {
-            bookCount[livro_id]++;
-          } else {
-            bookCount[livro_id] = 1;
-          }
-        });
+    this.topThreeBooks = rentals.data.data.slice(0, 3).map(item => ({
+      label: item.name,
+      data: item.rented,
+    }));
+    console.log(this.topThreeBooks);
 
-        const bookCountArray = Object.entries(bookCount);
-
-        bookCountArray.sort((a, b) => b[1] - a[1]);
-
-        this.topThreeBooks = bookCountArray.slice(0, 3);
-
-        this.renderBarChart();
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-      }
-    },
+    this.renderBarChart();
+  } catch (error) {
+    console.error("Erro ao buscar dados:", error);
+  }
+},
     renderBarChart() {
       if (!this.topThreeBooks) return;
 
-      const labels = this.topThreeBooks.map((item) => item[0]);
-      const data = this.topThreeBooks.map((item) => item[1]);
-      // const topThreeBookNames = this.topThreeBooks.map((item) => item[0]).join(', ');
+      const labels = this.topThreeBooks.map(item => item.label);
+const data = this.topThreeBooks.map(item => item.data);
       const ctx = this.$refs.myChart.getContext("2d");
       new Chart(ctx, {
         type: "bar",
@@ -60,7 +49,7 @@ export default {
           datasets: [
             {
               axis: "y",
-              label: 'Livros alugados',
+              label: "Livros alugados",
               data: data,
               fill: false,
               backgroundColor: [

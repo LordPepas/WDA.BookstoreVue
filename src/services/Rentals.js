@@ -5,11 +5,14 @@ export default {
     return http.post("Rentals", rental);
   },
   read: (params) => {
-    return http.get("Books", {
+    if (!params) {
+      params = {};
+    }
+    return http.get("Rentals", {
       params: {
         PageNumber: params.pageNumber,
-        PageSize: params.pageSize,
-        OrderBy: params.orderBy,
+        ItemsPerPage: params.itemsPerPage,
+        OrderByProperty: params.orderBy,
         OrderDesc: params.orderDesc,
         SearchValue: params.searchValue,
       },

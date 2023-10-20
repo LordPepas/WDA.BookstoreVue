@@ -5,12 +5,15 @@ export default {
     return http.post("Publishers", publisher);
   },
   read: (params) => {
+    if (!params) {
+      params = {};
+    }
     return http.get("Publishers", {
       params: {
         PageNumber: params.pageNumber,
-        PageSize: params.pageSize,
-        OrderBy: params.orderBy,
-        OrderDesc : params.orderDesc,
+        ItemsPerPage: params.itemsPerPage,
+        OrderByProperty: params.orderBy,
+        OrderDesc: params.orderDesc,
         SearchValue: params.searchValue,
       },
     });

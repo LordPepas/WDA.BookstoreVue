@@ -1,8 +1,8 @@
 <template>
   <v-flex width="100">
     <div class="chart_container">
-      <div class="title text-center">Status de Aluguéis </div>
-      <canvas ref="myPieChart" style="max-width: 270px; min-width: 260px ; margin: auto;"></canvas>
+      <div class="title text-center">Status de Aluguéis</div>
+      <canvas ref="myPieChart" style="max-width: 270px; min-width: 260px; margin: auto;"></canvas>
     </div>
   </v-flex>
 </template>
@@ -10,46 +10,54 @@
 <script>
 import Chart from "chart.js/auto";
 import Rentals from "@/services/Rentals";
+
 export default {
   data() {
     return {
       statusRentals: [],
+      params: {
+        orderBy: "id",
+        orderDesc: false,
+        pageNumber: 1,
+        itemsPerPage: null,
+      },
     };
   },
-  mounted() {
+  async mounted() {
+    await this.fetchTotalItems();
     this.fetchStatus();
   },
   methods: {
-    parseDateISO(date) {
-      const [dd, mm, yyyy] = date.split("/");
-      return `${yyyy}-${mm}-${dd}`;
+    async fetchTotalItems() {
+      try {
+        const rentalsResponse = await Rentals.read();
+        this.params.itemsPerPage = rentalsResponse.data.totalItems;
+      } catch (error) {
+        console.error("Erro ao buscar o número total de itens:", error);
+      }
     },
     async fetchStatus() {
       try {
-        const rentals = await Rentals.read();
-        const status = {
+        const rentalsResponse = await Rentals.read(this.params);
+        const rentals = rentalsResponse.data.data;
+
+        const statusCounts = {
           "No prazo": 0,
           "Com atraso": 0,
           "Não devolvido": 0,
         };
 
-        rentals.data.forEach((rental) => {
-          if (rental.data_devolucao != null) {
-            const devolucaoDate = this.parseDateISO(rental.data_devolucao);
-            const previsaoDate = this.parseDateISO(rental.data_previsao);
-            if (devolucaoDate > previsaoDate) {
-              status["Com atraso"]++;
-            } else {
-              status["No prazo"]++;
-            }
-          } else {
-            status["Não devolvido"]++;
+        rentals.forEach(rental => {
+          if (rental.status === "Atrasado") {
+            statusCounts["Com atraso"]++;
+          } else if (rental.status === "No prazo") {
+            statusCounts["No prazo"]++;
+          } else if (rental.status === "Pendente") {
+            statusCounts["Não devolvido"]++;
           }
         });
 
-        const statusCountArray = Object.entries(status);
-
-        statusCountArray.sort((a, b) => b[1] - a[1]);
+        const statusCountArray = Object.entries(statusCounts);
 
         this.statusRentals = statusCountArray;
 
@@ -63,8 +71,13 @@ export default {
 
       const labels = this.statusRentals.map((item) => item[0]);
       const data = this.statusRentals.map((item) => item[1]);
-      const ctz = this.$refs.myPieChart.getContext("2d");
-      new Chart(ctz, {
+      const colors = [
+        "rgb(54, 162, 235)",
+        "rgb(255, 99, 132)",
+        "rgb(255, 206, 86)",
+      ];
+      const ctx = this.$refs.myPieChart.getContext("2d");
+      new Chart(ctx, {
         type: "pie",
         data: {
           labels: labels,
@@ -72,21 +85,8 @@ export default {
             {
               label: "",
               data: data,
-              backgroundColor: [
-                "rgb(54, 162, 235)",
-                "rgb(255, 99, 132)",
-                "rgb(255, 206, 86)",
-                "rgb(75, 192, 192)",
-                "rgb(153, 102, 255)",
-              ],
-              borderColor: [
-                "rgba(54, 162, 235, 1)",
-                "rgba(255, 99, 132, 1)",
-                "rgba(255, 206, 86, 1)",
-                "rgba(75, 192, 192, 1)",
-                "rgba(153, 102, 255, 1)",
-                "rgba(255, 159, 64, 1)",
-              ],
+              backgroundColor: colors,
+              borderColor: colors,
               borderWidth: 1,
             },
           ],
@@ -104,5 +104,3 @@ export default {
   },
 };
 </script>
-
-<style></style>

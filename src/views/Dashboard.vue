@@ -53,7 +53,7 @@
                 <LineChart />
               </v-card>
             </v-col>
-            <v-col cols="12" md="6">
+            <v-col cols="auto" style="margin: auto;">
               <v-card class="mt-2 card-graph lastRental">
                 <v-card-title class="center mt-n6" color="teal darken-3">
                   <v-icon color="teal darken-3">mdi-book</v-icon>
@@ -132,16 +132,17 @@ export default {
           Rentals.read(),
         ]);
 
-        this.lists[0].count = users.data.data.length;
-        this.lists[1].count = publishers.data.data.length;
-        this.lists[2].count = books.data.data.length;
-        this.lists[3].count = rentals.data.data.length;
+        this.lists[0].count = users.data.totalItems;
+        this.lists[1].count = publishers.data.totalItems;
+        this.lists[2].count = books.data.totalItems;
+        this.lists[3].count = rentals.data.totalItems;
 
-        const lastRental = rentals.data.reduce((prev, current) => {
+        
+        const lastRental = rentals.data.data.reduce((prev, current) => {
           return prev.id < current.id ? current : prev;
         });
         this.lastRental = lastRental
-          ? lastRental.livro_id.nome
+          ? lastRental.book.name
           : "Não há registros de aluguéis";
       } catch (error) {
         console.error("Erro ao buscar dados:", error);

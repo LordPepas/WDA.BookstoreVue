@@ -49,7 +49,6 @@
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
         @update:options="handleOptionsUpdate"
-        multi-sort
         :footer-props="{
           itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
@@ -153,7 +152,7 @@ export default {
         orderBy: "id",
         orderDesc: false,
         pageNumber: null,
-        pageSize: null,
+        itemsPerPage: null,
       },
       search: "",
       name: "",
@@ -238,12 +237,12 @@ export default {
     handleOptionsUpdate(options) {
       this.params.orderBy = options.sortBy[0];
       this.params.orderDesc = options.sortDesc[0];
-      this.params.pageSize = options.itemsPerPage;
+      this.params.itemsPerPage = options.itemsPerPage;
       this.params.pageNumber = options.page;
 
-      this.itemsPerPage = this.params.pageSize;
+      this.itemsPerPage = this.params.itemsPerPage;
       this.listPublishers();
-      console.log(this.params.pageSize);
+      console.log(this.params);
     },
     /* ===== CRUD ===== */
 
@@ -253,15 +252,14 @@ export default {
         const response = await Publisher.read(this.params);
 
         this.publishersData = response.data.data;
-        this.totalItems = response.data.header.totalItems;
-        this.totalPages = response.data.header.totalPages;
+        this.totalItems = response.data.totalItems;
+        this.totalPages = response.data.totalPages;
       } catch (error) {
         console.error("Erro ao buscar editoras:", error);
       }
     },
 
     /* CREATE/UPDATE */
-
     resetValidation() {
       this.$refs.form.resetValidation();
     },

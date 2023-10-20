@@ -1,24 +1,23 @@
 <template>
   <div class="d-flex flex-column justify-end align-end mt-2">
     <v-container>
-      <v-row class="d-flex align-center" xs="vertical-center">
-        <v-col cols="auto" class="ml-2">
+      <v-row class="d-flex align-center">
+        <v-col cols="auto ml-2">
           <v-toolbar-title class="font-weight-medium" style="font-size: 30px"
             >Aluguéis</v-toolbar-title
           >
         </v-col>
-
         <v-col cols="auto" class="d-flex align-center mb-0">
           <img src="@/assets/divider.svg" alt="" />
         </v-col>
-        <v-col cols="">
+        <v-col cols="auto">
           <v-btn
             class="rounded-lg px-0 v-btn v-btn--has-bg theme--dark"
             color="blue darken-3"
             style="height: 40px; min-width: 40px"
             @click="openModalCreate"
           >
-            <img src="@/assets/plus.svg" alt="" />
+            <img src="@/assets/plus.svg" />
           </v-btn>
         </v-col>
         <v-col
@@ -39,17 +38,19 @@
         </v-col>
       </v-row>
 
+      <!-- Tabela de Dados -->
       <v-data-table
-        style="overflow-x: hidden"
         :headers="headers"
-        :items="filteredRentals"
-        :sort-by="['id']"
-        :sort-desc="[false, true]"
-        multi-sort
-        :items-per-page="itemsPerPage"
+        :items="rentalsData"
         :header-props="headerProps"
+        :sort-desc="params.orderDesc"
+        :sort-by="params.orderBy"
+        :server-items-length="totalItems"
+        :items-per-page="itemsPerPage"
+        :page="currentPage"
+        @update:options="handleOptionsUpdate"
         :footer-props="{
-          itemsPerPageOptions: [5, 10, 25, -1],
+          itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
         mobile-breakpoint="880"
@@ -64,7 +65,7 @@
               <v-icon
                 variant="plain"
                 v-if="
-                 item.status === 'Pendente' &&
+                  item.status === 'Pendente' &&
                   formatDate(item.previsionDate) < formatDate(date)
                 "
                 color="warning"
@@ -81,8 +82,7 @@
             <template v-slot:activator="{ on }">
               <v-icon
                 variant="plain"
-                v-if=" item.status === 'Pendente'
-                "
+                v-if="item.status === 'Pendente'"
                 color="success"
                 @click="openModalReturn(item)"
                 v-on="on"
@@ -120,7 +120,7 @@
           </v-chip>
         </template>
       </v-data-table>
-      <!-- FORM CREATE -->
+      <!-- FORM CREATE/UPDATE -->
       <v-row justify="center">
         <v-dialog v-model="Createdialog" max-width="600px" persistent>
           <v-card>
@@ -131,7 +131,7 @@
               <v-form ref="form" @submit.prevent="submitCreate">
                 <v-autocomplete
                   v-model="selectedBook"
-                  :items="listBooks"
+                  :items="booksData"
                   :rules="selectBookRules"
                   item-text="name"
                   label="Nome do livro"
@@ -141,7 +141,7 @@
                 ></v-autocomplete>
                 <v-autocomplete
                   v-model="selectedUser"
-                  :items="listUsers"
+                  :items="usersData"
                   item-text="name"
                   :rules="selectedUserRules"
                   label="Nome do Cliente"
@@ -161,19 +161,19 @@
                   <template v-slot:activator="{ on, attrs }">
                     <v-text-field
                       disabled
-                      v-model="dateRentFormatted"
+                      v-model="formattedRentalDate"
                       label="Data de aluguel"
                       hint="DD/MM/YYYY format"
                       :rules="dateFormattedRules"
                       persistent-hint
                       append-icon="mdi-calendar"
-                      @blur="dateRentFormatted = formatDate(dateRentFormatted)"
+                      @blur="formatDate(rentalDate)"
                       v-bind="attrs"
                       v-on="on"
                     ></v-text-field>
                   </template>
                   <v-date-picker
-                    v-model="aluguelDate"
+                    v-model="rentalDate"
                     no-title
                     @input="menu1 = false"
                   ></v-date-picker>
@@ -189,21 +189,23 @@
                 >
                   <template v-slot:activator="{ on, attrs }">
                     <v-text-field
-                      v-model="dateForecastFormatted"
+                      v-model="formattedPrevisionDate"
                       label="Previsão de devolução"
                       hint="MM/DD/YYYY format"
                       :rules="previsaoDateRules"
                       persistent-hint
                       append-icon="mdi-calendar"
-                      @blur="formattedPrevisaoDate = formatDate(previsaoDate)"
+                      @blur="formatDate(previsionDate)"
                       v-bind="attrs"
                       v-on="on"
                     ></v-text-field>
                   </template>
                   <v-date-picker
-                    v-model="previsaoDate"
+                    v-model="previsionDate"
                     no-title
                     @input="menu2 = false"
+                    :min="todayDate()"
+                    :max="previsionDateMax()"
                   ></v-date-picker>
                 </v-menu>
                 <v-card-actions>
@@ -232,31 +234,31 @@
 
 <script>
 import Rentals from "@/services/Rentals";
+import Books from "@/services/Books";
+import Users from "@/services/Users";
 import Swal from "sweetalert2";
 
 export default {
   data() {
-    const currentDate = new Date();
-    const formattedDate = currentDate.toLocaleDateString("pt-BR");
-    const futureDate = new Date(
-      currentDate.getTime() + 30 * 24 * 60 * 60 * 1000
-    );
-    const formattedPrevisaoDate = futureDate.toLocaleDateString("pt-BR");
     return {
-      date: currentDate.toISOString().substr(0, 10),
-      date2: futureDate.toISOString().substr(0, 10),
-      dateRentFormatted: formattedDate,
-      dateForecastFormatted: formattedPrevisaoDate,
-      listRentals: [],
-      listUsers: [],
-      listBooks: [],
-      search: "",
+      rentalsData: [],
+      usersData: [],
+      booksData: [],
+      params: {
+        searchValue: "",
+        orderBy: "id",
+        orderDesc: false,
+        pageNumber: null,
+        itemsPerPage: null,
+      },
       menu1: "",
       menu2: "",
+      date: "",
+      search: "",
       selectedBook: null,
       selectedUser: null,
-      previsaoDate: futureDate.toISOString().substr(0, 10),
-      aluguelDate: currentDate.toISOString().substr(0, 10),
+      rentalDate: "",
+      previsionDate: "",
       devolucaoDate: null,
       Createdialog: false,
       dialogReturn: false,
@@ -275,12 +277,12 @@ export default {
         },
         {
           text: "Livro",
-          value: "book",
+          value: "book.name",
           class: "text-md-body-1 font-weight-bold ",
         },
         {
           text: "Usuário",
-          value: "user",
+          value: "user.name",
           class: "text-md-body-1 font-weight-bold ",
         },
         {
@@ -302,7 +304,6 @@ export default {
           text: "Status",
           value: "status",
           align: "center",
-          sortable: false,
           class: "text-md-body-1 font-weight-bold ",
         },
         {
@@ -317,58 +318,78 @@ export default {
       selectedUserRules: [(v) => !!v || "O usuário é obrigatório"],
       dateFormattedRules: [(v) => !!v || "A data de aluguel é obrigatório"],
       previsaoDateRules: [(v) => !!v || "A data de previsão é obrigatório"],
-      currentPage: 5,
+      currentPage: 1,
+      totalItems: 0,
+      totalPages: 0,
+      sortBy: "",
       itemsPerPage: 5,
     };
   },
-  created() {
-    this.listRent();
-  },
-  computed: {
-    filteredRentals() {
-      const searchValue = this.search.toLowerCase();
-      return this.listRentals.filter((rental) => {
-        for (const prop in rental) {
-          const propValue = rental[prop].toString().toLowerCase();
-          if (propValue.includes(searchValue)) {
-            return true;
-          }
-        }
-        return false;
-      });
-    },
-    totalPages() {
-      return Math.ceil(this.paginatedRentals.length / this.itemsPerPage);
-    },
-    paginatedRentals() {
-      const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-      const endIndex = startIndex + this.itemsPerPage;
-      return this.filteredRentals.slice(startIndex, endIndex);
-    },
+  mounted() {
+    this.listRentals();
   },
   watch: {
+    search: {
+      handler(newSearch, oldSearch) {
+        if (newSearch !== oldSearch) {
+          this.params.pageNumber = 1;
+          this.params.searchValue = newSearch;
+          this.listBooks();
+        }
+      },
+      deep: false,
+    },
     aluguelDate(newValue) {
-      this.dateRentFormatted = this.formatDate(newValue);
+      this.rentalDate = this.formatDate(newValue);
     },
     previsaoDate(newValue) {
-      this.dateForecastFormatted = this.formatDate(newValue);
+      this.previsionDate = this.formatDate(newValue);
     },
     date() {
-      this.aluguelDate = this.parseDateISO(this.dateRentFormatted);
-    },
-    date2() {
-      this.previsaoDate = this.parseDateISO(this.dateForecastFormatted);
+      this.rentalDate = this.parseDateISO(this.dateRentFormatted);
     },
   },
-
+  computed: {
+    formattedRentalDate() {
+      if (this.rentalDate) {
+        const date = new Date(this.rentalDate + "T00:00:00Z");
+        date.setHours(date.getHours() + 3);
+        const dd = String(date.getDate()).padStart(2, "0");
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const yyyy = date.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+      }
+      return null;
+    },
+    formattedPrevisionDate() {
+      if (this.previsionDate) {
+        const date = new Date(this.previsionDate + "T00:00:00Z");
+        date.setHours(date.getHours() + 3);
+        const dd = String(date.getDate()).padStart(2, "0");
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const yyyy = date.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+      }
+      return null;
+    },
+  },
   methods: {
+    previsionDateMax() {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      return futureDate.toISOString().substr(0, 10);
+    },
+    todayDate() {
+      const brazilCurrentDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      return brazilCurrentDate.toISOString().substr(0, 10);
+    },
     getStatusColor(item) {
-      if (item.status == "Com atraso") {
+      if (item.status == "Atrasado") {
         return "error";
       } else if (item.status == "No prazo") {
         return "success";
       } else {
-        return "primary";
+        return "warning";
       }
     },
 
@@ -385,39 +406,51 @@ export default {
     /* ===== CRUD ===== */
 
     /* READ */
-    async listRent() {
+    async listRentals() {
       try {
         const [rentalsResponse, booksResponse, usersResponse] =
           await Promise.all([
-            Rentals.read(),
-            Rentals.selectBooksRead(),
-            Rentals.selectUsersRead(),
+            Rentals.read(this.params),
+            Books.readAvailable(),
+            Users.readSummary(),
           ]);
 
-        this.listBooks = booksResponse.data.data.map((book) => ({
-          id: book.id,
-          name: book.name,
-        }));
+        this.booksData = booksResponse.data.data;
 
-        this.listUsers = usersResponse.data.data.map((user) => ({
-          id: user.id,
-          name: user.name,
-        }));
+        this.usersData = usersResponse.data.data;
 
-        this.listRentals = rentalsResponse.data.data.map((rental) => ({
-          id: rental.id,
-          book: rental.book.name,
-          user: rental.user.name,
-          rentalDate: this.formatDate(rental.rentalDate),
-          previsionDate: this.formatDate(rental.previsionDate),
-          returnDate: rental.returnDate
+        this.rentalsData = rentalsResponse.data.data;
+        this.rentalsData.forEach((rental) => {
+          rental.previsionDate = this.formatDate(rental.previsionDate);
+          rental.rentalDate = this.formatDate(rental.rentalDate);
+          rental.returnDate = rental.returnDate = rental.returnDate
             ? this.formatDate(rental.returnDate)
-            : "Não devolvido",
-          status: rental.status,
-        }));
+            : "Não devolvido";
+        });
+
+        this.totalItems = rentalsResponse.data.totalItems;
+        this.totalPages = rentalsResponse.data.totalPages;
       } catch (error) {
         console.error("Erro ao buscar informações:", error);
       }
+    },
+    generateItemsPerPageOptions() {
+      if (this.totalPages > 25) {
+        return [5, 10, 25, this.totalPages];
+      } else {
+        return [5, 10, 25];
+      }
+    },
+
+    handleOptionsUpdate(options) {
+      this.params.orderBy = options.sortBy[0];
+      this.params.orderDesc = options.sortDesc[0];
+      this.params.itemsPerPage = options.itemsPerPage;
+      this.params.pageNumber = options.page;
+
+      this.currentpage = options.page;
+      this.itemsPerPage = this.params.itemsPerPage;
+      this.listRentals();
     },
 
     /* CREATE */
@@ -426,11 +459,11 @@ export default {
     },
 
     closeModal() {
-      this.previsaoDate = this.date2;
       this.selectedBook = null;
       (this.selectedUser = null), this.resetValidation();
       this.Createdialog = false;
       this.dialogReturn = false;
+      console.log(this.rentalsData, this.previsionDate);
     },
 
     openModalCreate() {
@@ -440,9 +473,10 @@ export default {
       ) {
         this.$refs.form.resetValidation();
       }
+      this.rentalDate = this.todayDate();
+      this.previsionDate = this.previsionDateMax();
       this.isSubmitDisabled = true;
       this.Createdialog = true;
-      this.aluguelDate = new Date().toISOString().substr(0, 10);
     },
 
     async submitCreate() {
@@ -453,25 +487,25 @@ export default {
           return;
         }
         try {
-          const selectedBook = this.listBooks.find(
+          const selectedBook = this.booksData.find(
             (book) => book.name === this.selectedBook
           );
-          const selectedUser = this.listUsers.find(
+          const selectedUser = this.usersData.find(
             (user) => user.name === this.selectedUser
           );
           const newRental = {
             bookId: selectedBook.id,
             userId: selectedUser.id,
-            rentalDate: this.aluguelDate,
-            previsionDate: this.previsaoDate,
+            rentalDate: this.rentalDate,
+            previsionDate: this.previsionDate,
           };
           console.log(newRental);
           const response = await Rentals.create(newRental);
-          this.listRentals.push({
-            id: response.data.data.id,
+          this.rentalsData.push({
+            id: response.data.id,
             ...newRental,
           });
-          this.listRent();
+          this.listRentals();
           this.closeModal();
           Swal.fire({
             icon: "success",
@@ -517,10 +551,10 @@ export default {
       }
     },
 
-    async openModalDelete(aluguel) {
-      this.updateRental = { ...aluguel };
+    async openModalDelete(rental) {
+      this.updateRental = { ...rental };
       const confirmed = await this.openConfirmationModal(
-        `Deseja excluir o Aluguel do Livro: </br> ${aluguel.book} ? `,
+        `Deseja excluir o Aluguel do Livro: </br> ${rental.book.name} ? `,
         "Confirma a exclusão do aluguel?"
       );
 
@@ -529,7 +563,7 @@ export default {
           const response = await Rentals.delete(this.updateRental);
 
           if (response.status === 200) {
-            this.listRent();
+            this.listRentals();
             Swal.fire({
               icon: "success",
               text: "Aluguel Excluído com Sucesso!",
@@ -579,18 +613,11 @@ export default {
         try {
           const returnRental = {
             id: this.selectedReantalId,
-            returnDate: this.date,
+            returnDate: this.todayDate(),
           };
-
+          
           await Rentals.update(returnRental);
-          this.listRentals = this.listRentals.map((rental) => {
-            if (rental.id === returnRental.id) {
-              return { ...rental, ...returnRental };
-            } else {
-              return rental;
-            }
-          });
-          this.listRent();
+          this.listRentals();
           this.closeModal();
           await Swal.fire({
             icon: "success",
@@ -605,7 +632,7 @@ export default {
           await Swal.fire({
             icon: "info",
             title: "Livro não Devolvido",
-            text: error.response.message,
+            text: error.response.errors,
             showConfirmButton: false,
             toast: true,
             position: "top-end",

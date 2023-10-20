@@ -42,13 +42,11 @@
       <v-data-table
         :headers="headers"
         :items="booksData"
-        multi-sort-key="yourSortKey"
         :header-props="headerProps"
         :sort-desc="params.orderDesc"
         :sort-by="params.orderBy"
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
-        multi-sorts
         :page="currentPage"
         @update:options="handleOptionsUpdate"
         :footer-props="{
@@ -120,7 +118,7 @@
                 <v-autocomplete
                   v-model="publishers"
                   :rules="publishersRules"
-                  :items="listPublishers"
+                  :items="publishersData"
                   item-text="name"
                   label="Editora do Livro"
                   append-icon="mdi-bookshelf"
@@ -178,13 +176,13 @@ export default {
   data() {
     return {
       booksData: [],
-      listPublishers: [],
+      publishersData: [],
       params: {
         searchValue: "",
         orderBy: "id",
         orderDesc: false,
         pageNumber: null,
-        pageSize: null,
+        itemsPerPage: null,
       },
       search: "",
       name: "",
@@ -222,7 +220,7 @@ export default {
         },
         {
           text: "Editora",
-          value: "publisher",
+          value: "publisher.name",
           align: "center",
           class: "text-md-body-1 font-weight-bold ",
         },
@@ -283,14 +281,14 @@ export default {
       itemsPerPage: 5,
     };
   },
-  created() {
+  mounted() {
     this.listBooks();
   },
   watch: {
     search: {
       handler(newSearch, oldSearch) {
         if (newSearch !== oldSearch) {
-          this.params.pageNumber = 1;
+          this.params.itemsPerPage = 1;
           this.params.searchValue = newSearch;
           this.listBooks();
         }
@@ -299,29 +297,23 @@ export default {
     },
   },
   methods: {
+    getCurrentYear() {
+      const currentYear = new Date().getFullYear();
+      return currentYear;
+    },
     /* ===== CRUD ===== */
 
     /* READ */
     async listBooks() {
       try {
         const publisherResponse = await Publisher.readSummary();
-        this.listPublishers = publisherResponse.data.data.map((publisher) => ({
-          id: publisher.id,
-          name: publisher.name,
-        }));
 
         const booksResponse = await Books.read(this.params);
-        this.booksData = booksResponse.data.data.map((book) => ({
-          id: book.id,
-          name: book.name,
-          author: book.author,
-          publisher: book.publisher.name,
-          release: book.release,
-          quantity: book.quantity,
-          rented: book.rented,
-        }));
-        this.totalItems = booksResponse.data.header.totalItems;
-        this.totalPages = booksResponse.data.header.totalPages;
+
+        this.publishersData = publisherResponse.data.data;
+        this.booksData = booksResponse.data.data;
+        this.totalItems = booksResponse.data.totalItems;
+        this.totalPages = booksResponse.data.totalPages;
       } catch (error) {
         console.error("Erro ao buscar editoras e livros:", error);
       }
@@ -329,20 +321,20 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [1, 10, 25, this.totalPages];
+        return [5, 10, 25, this.totalPages];
       } else {
-        return [1, 10, 25];
+        return [5, 10, 25];
       }
     },
 
     handleOptionsUpdate(options) {
       this.params.orderBy = options.sortBy[0];
       this.params.orderDesc = options.sortDesc[0];
-      this.params.pageSize = options.itemsPerPage;
+      this.params.itemsPerPage = options.itemsPerPage;
       this.params.pageNumber = options.page;
 
       this.currentpage = options.page;
-      this.itemsPerPage = this.params.pageSize;
+      this.itemsPerPage = this.params.itemsPerPage;
       this.listBooks();
     },
 
@@ -380,8 +372,8 @@ export default {
       this.selectedBookId = book.id;
       this.name = book.name;
       this.author = book.author;
-      const selectedPublisher = this.listPublishers.find(
-        (publisher) => publisher.name === book.publisher
+      const selectedPublisher = this.publishersData.find(
+        (publisher) => publisher.name === book.publisher.name
       );
       this.publishers = selectedPublisher.name;
       this.release = book.release;
@@ -395,7 +387,7 @@ export default {
           this.isSubmitDisabled = false;
           return;
         }
-        const selectedPublisher = await this.listPublishers.find(
+        const selectedPublisher = await this.publishersData.find(
           (publisher) => publisher.name === this.publishers
         );
         const bookData = {
@@ -411,8 +403,8 @@ export default {
             try {
               const response = await Books.create(bookData);
               this.booksData.push({ id: response.data.id, ...bookData });
-              this.closeModal();
               this.listBooks();
+              this.closeModal();
               Swal.fire({
                 icon: "success",
                 title: "Livro adicionado com Sucesso!",
@@ -440,8 +432,6 @@ export default {
               ...bookData,
             };
             try {
-              this.closeModal();
-              this.listBooks();
               await Books.update(update);
               this.booksData = this.booksData.map((book) => {
                 if (book.id === update.id) {
@@ -450,6 +440,8 @@ export default {
                   return book;
                 }
               });
+              this.closeModal();
+              this.listBooks();
               Swal.fire({
                 icon: "success",
                 title: "Livro atualizado com Sucesso!",
@@ -489,7 +481,6 @@ export default {
 
     /* DELETE */
     async openModalDelete(book) {
-      console.log(this.params.pageNumber);
       const result = await Swal.fire({
         icon: "warning",
         title: `Deseja excluir o livro ${book.name} ?`,
