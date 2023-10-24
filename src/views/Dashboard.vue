@@ -60,12 +60,12 @@
                   Último livro alugado:
                 </v-card-title>
                 <v-card-text
-                  class="text-h6 mt-n2 center blue-grey--text font-weight-medium"
+                  class="text-h6 mt-n4 center blue-grey--text font-weight-medium"
                 >
                   {{ lastRental }}
                 </v-card-text>
               </v-card>
-              <v-card class="card-graph mt">
+              <v-card class="card-graph-two mt-3">
                 <PieChart />
               </v-card>
             </v-col>
@@ -169,7 +169,7 @@ export default {
 }
 
 .lastRental {
-  height: 110px;
+  height: 90px;
 }
 
 .center-button {
@@ -188,8 +188,16 @@ export default {
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
   border-radius: 5px;
   width: 460px;
-  min-width: 260px;
-  max-width: 480px;
+  margin: auto;
+}
+
+.card-graph-two {
+  border: 1.5px solid #0097a7;
+  padding: 20px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  width: 360px;
+  margin-top: 20px;
   margin: auto;
 }
 
@@ -208,6 +216,10 @@ export default {
     width: 440px;
   }
 
+  .card-graph-two {
+    width: 340px;
+  }
+
   .lastRental {
     height: 100px;
   }
@@ -222,6 +234,10 @@ export default {
     width: 390px;
   }
 
+  .card-graph-two {
+    width: 290px;
+  }
+
   .lastRental {
     height: 90px;
   }
@@ -231,9 +247,13 @@ export default {
   }
 }
 
-@media (max-width: 940px) {
+@media (max-width: 1040px) {
   .card-graph {
     width: 420px;
+  }
+
+  .card-graph-two {
+    width: 360px;
   }
 
   .lastRental {
@@ -259,9 +279,5 @@ export default {
   }
 }
 
-@media (max-width: 420px) {
-  .card-graph {
-    width: 280px;
-  }
-}
+
 </style>

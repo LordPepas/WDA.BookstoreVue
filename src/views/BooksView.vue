@@ -1,42 +1,11 @@
 <template>
   <div class="d-flex flex-column justify-end align-end mt-2">
     <v-container>
-      <v-row class="d-flex align-center">
-        <v-col cols="auto ml-2">
-          <v-toolbar-title class="font-weight-medium" style="font-size: 30px"
-            >Livros</v-toolbar-title
-          >
-        </v-col>
-        <v-col cols="auto" class="d-flex align-center mb-0">
-          <img src="@/assets/divider.svg" />
-        </v-col>
-        <v-col cols="auto">
-          <v-btn
-            class="rounded-lg px-0 v-btn v-btn--has-bg theme--dark"
-            color="blue darken-3"
-            style="height: 40px; min-width: 40px"
-            @click="openModalCreate"
-          >
-            <img src="@/assets/plus.svg" />
-          </v-btn>
-        </v-col>
-        <v-col
-          cols="12"
-          xs="12"
-          sm="5"
-          md="6"
-          lg="6"
-          class="mr-auto ml-auto mr-sm-2 mb-n6"
-        >
-          <v-text-field
-            dense
-            outlined
-            v-model="search"
-            label="Pesquisar"
-            prepend-inner-icon="mdi-magnify"
-          ></v-text-field>
-        </v-col>
-      </v-row>
+      <AppPageHeader
+        :pageTitle="pageTitle"
+        :search.sync="search"
+        @open-create-modal="openModalCreate"
+      />
 
       <!-- Tabela de Dados -->
       <v-data-table
@@ -55,10 +24,23 @@
         }"
         mobile-breakpoint="820"
         class="align-center px-4 py-4"
-        loading="items"
-        loading-text="Carregando dados... Aguarde!"
-        no-data-text="Nenhum Livro encontrado"
+        :no-data-text="noDataText"
       >
+      <template v-slot:[`item.name`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.name : truncateText(item.name, 20) }}
+          </div>
+        </template>
+        <template v-slot:[`item.author`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.author : truncateText(item.author, 16) }}
+          </div>
+        </template>
+        <template v-slot:[`item.publisher.name`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.publisher.name : truncateText(item.publisher.name, 16) }}
+          </div>
+        </template>
         <template v-slot:[`item.actions`]="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on }">
@@ -171,6 +153,7 @@
 import Swal from "sweetalert2";
 import Books from "@/services/Books";
 import Publisher from "@/services/Publishers";
+import AppPageHeader from "@/components/AppPageHeader";
 
 export default {
   data() {
@@ -184,7 +167,6 @@ export default {
         pageNumber: null,
         itemsPerPage: null,
       },
-      search: "",
       name: "",
       publishers: "",
       author: "",
@@ -255,7 +237,7 @@ export default {
         (v) =>
           (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
         (v) =>
-          (v && v.length <= 45) || "O título deve ter no máximo 45 caracteres",
+        (v && v.length <= 45) || "O título deve ter no máximo 45 caracteres",
       ],
       authorRules: [
         (v) => !!v || "O autor é obrigatório",
@@ -279,7 +261,15 @@ export default {
       totalPages: 0,
       sortBy: "",
       itemsPerPage: 5,
+      noDataText: "Carregando dados... Aguarde!",
+      pageTitle: "Livros",
+      search: "",
+      showFullText: false,
+      fullTextItem: null,
     };
+  },
+  components: {
+    AppPageHeader,
   },
   mounted() {
     this.listBooks();
@@ -288,7 +278,7 @@ export default {
     search: {
       handler(newSearch, oldSearch) {
         if (newSearch !== oldSearch) {
-          this.params.itemsPerPage = 1;
+          this.params.pageNumber = 1;
           this.params.searchValue = newSearch;
           this.listBooks();
         }
@@ -301,21 +291,52 @@ export default {
       const currentYear = new Date().getFullYear();
       return currentYear;
     },
+    toggleFullText(item) {
+      this.showFullText = !this.showFullText;
+      this.fullTextItem = item;
+    },
+
+    truncateText(text, maxLength) {
+      return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+    },
     /* ===== CRUD ===== */
 
     /* READ */
     async listBooks() {
       try {
-        const publisherResponse = await Publisher.readSummary();
-
         const booksResponse = await Books.read(this.params);
 
-        this.publishersData = publisherResponse.data.data;
         this.booksData = booksResponse.data.data;
+
         this.totalItems = booksResponse.data.totalItems;
         this.totalPages = booksResponse.data.totalPages;
       } catch (error) {
-        console.error("Erro ao buscar editoras e livros:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Nenhum livro encontrado",
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
+        this.noDataText = "Nenhum livro encontrado";
+        this.booksData = [];
+        this.totalItems = null;
+        this.totalPages = null;
+      }
+      try {
+        const publisherResponse = await Publisher.readSummary();
+        this.publishersData = publisherResponse.data.data;
+      } catch (error) {
+        await Swal.fire({
+          icon: "error",
+          title: "Nenhuma editora encontrada",
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
       }
     },
 

@@ -1,42 +1,11 @@
 <template>
   <div class="d-flex flex-column justify-end align-end mt-2">
     <v-container>
-      <v-row class="d-flex align-center">
-        <v-col cols="auto ml-2">
-          <v-toolbar-title class="font-weight-medium" style="font-size: 30px"
-            >Usuários</v-toolbar-title
-          >
-        </v-col>
-        <v-col cols="auto" class="d-flex align-center mb-0">
-          <img src="@/assets/divider.svg" />
-        </v-col>
-        <v-col cols="auto">
-          <v-btn
-            class="rounded-lg px-0 v-btn v-btn--has-bg theme--dark"
-            color="blue darken-3"
-            style="height: 40px; min-width: 40px"
-            @click="openModalCreate"
-          >
-            <img src="@/assets/plus.svg" />
-          </v-btn>
-        </v-col>
-        <v-col
-          cols="12"
-          xs="12"
-          sm="5"
-          md="6"
-          lg="6"
-          class="mr-auto ml-auto mr-sm-2 mb-n6"
-        >
-          <v-text-field
-            dense
-            outlined
-            v-model="search"
-            label="Pesquisar"
-            prepend-inner-icon="mdi-magnify"
-          ></v-text-field>
-        </v-col>
-      </v-row>
+      <AppPageHeader
+        :pageTitle="pageTitle"
+        :search.sync="search"
+        @open-create-modal="openModalCreate"
+      />
 
       <!-- Tabela de Dados -->
       <v-data-table
@@ -55,10 +24,28 @@
         }"
         mobile-breakpoint="820"
         class="align-center px-4 py-4"
-        loading="items"
-        loading-text="Carregando dados... Aguarde!"
-        no-data-text="Nenhum Cliente encontrado"
+        :no-data-text="noDataText"
       >
+      <template v-slot:[`item.name`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.name : truncateText(item.name, 20) }}
+          </div>
+        </template>
+        <template v-slot:[`item.city`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.city : truncateText(item.city, 16) }}
+          </div>
+        </template>
+        <template v-slot:[`item.address`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.address : truncateText(item.address, 16) }}
+          </div>
+        </template>
+        <template v-slot:[`item.email`]="{ item }">
+          <div @click="toggleFullText(item)">
+            {{ showFullText ? item.email : truncateText(item.email, 20) }}
+          </div>
+        </template>
         <template v-slot:[`item.actions`]="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on }">
@@ -67,7 +54,9 @@
                 color="info"
                 @click="openModalUpdate(item)"
                 v-on="on"
-              > mdi-account-edit-outline</v-icon>
+              >
+                mdi-account-edit-outline</v-icon
+              >
             </template>
             <span>Editar Usuário</span>
           </v-tooltip>
@@ -79,14 +68,15 @@
                 color="error"
                 @click="openModalDelete(item)"
                 v-on="on"
-                >mdi-trash-can-outline</v-icon>
+                >mdi-trash-can-outline</v-icon
+              >
             </template>
             <span>Excluir Usuário</span>
           </v-tooltip>
         </template>
       </v-data-table>
 
-      <!-- FORM CREATE/UPDATE -->
+      <!-- FORM Create/Update -->
       <v-row justify="center">
         <v-dialog v-model="dialogVisible" max-width="600px" persistent>
           <v-card>
@@ -105,17 +95,10 @@
                   required
                 ></v-text-field>
                 <v-text-field
-                  v-model="email"
-                  :rules="emailRules"
-                  :counter="120"
-                  label="Email do usuário"
-                  required
-                ></v-text-field>
-                <v-text-field
-                  v-model="city"
-                  :rules="cityRules"
-                  :counter="25"
-                  label="Cidade do usuário"
+                v-model="city"
+                :rules="cityRules"
+                :counter="25"
+                label="Cidade do usuário"
                   required
                 ></v-text-field>
                 <v-text-field
@@ -124,7 +107,14 @@
                   :counter="25"
                   label="Endereço do usuário"
                   required
-                ></v-text-field>
+                  ></v-text-field>
+                  <v-text-field
+                    v-model="email"
+                    :rules="emailRules"
+                    :counter="120"
+                    label="Email do usuário"
+                    required
+                  ></v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <v-btn
@@ -150,8 +140,10 @@
 </template>
 
 <script>
+import AppPageHeader from "@/components/AppPageHeader.vue";
 import Users from "@/services/Users.js";
 import Swal from "sweetalert2";
+
 export default {
   data() {
     return {
@@ -163,7 +155,6 @@ export default {
         pageNumber: null,
         itemsPerPage: null,
       },
-      search: "",
       name: "",
       email: "",
       city: "",
@@ -189,11 +180,6 @@ export default {
           class: "text-md-body-1 font-weight-bold ",
         },
         {
-          text: "Email",
-          value: "email",
-          class: "text-md-body-1 font-weight-bold ",
-        },
-        {
           text: "Cidade",
           value: "city",
           class: "text-md-body-1 font-weight-bold ",
@@ -201,6 +187,11 @@ export default {
         {
           text: "Endereço",
           value: "address",
+          class: "text-md-body-1 font-weight-bold ",
+        },
+        {
+          text: "Email",
+          value: "email",
           class: "text-md-body-1 font-weight-bold ",
         },
         {
@@ -235,34 +226,80 @@ export default {
         (v) =>
           (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
         (v) =>
-          (v && v.length <= 50) || "O endereço deve ter no máximo 50 caracteres",
+          (v && v.length <= 50) ||
+          "O endereço deve ter no máximo 50 caracteres",
       ],
       currentPage: 1,
       itemsPerPage: 5,
       totalItems: null,
-      totalPages:null,
+      totalPages: null,
       sortBy: "",
+      noDataText: "Carregando dados... Aguarde!",
+      pageTitle: "Usuários",
+      search: "",
+      showFullText: false,
+      fullTextItem: null,
     };
+  },
+  components: {
+    AppPageHeader,
   },
   mounted() {
     this.listUsers();
   },
   watch: {
     search: {
-      handler(newSearch, oldSearch) {
-        if (newSearch !== oldSearch) {
+      handler(newSearch) {
           this.params.pageNumber = 1;
           this.params.searchValue = newSearch;
           this.listUsers();
-        }
       },
       deep: false,
     },
   },
   methods: {
+    toggleFullText(item) {
+      this.showFullText = !this.showFullText;
+      this.fullTextItem = item;
+    },
+
+    truncateText(text, maxLength) {
+      return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+    },
+
     isValidEmail(email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(email);
+    },
+
+    /* ===== CRUD ===== */
+
+    /* READ */
+    async listUsers() {
+      console.log(
+        "listPublishers foi chamada com searchValue:",
+        this.params.searchValue
+      );
+      try {
+        const response = await Users.read(this.params);
+        this.usersData = response.data.data;
+        this.totalItems = response.data.totalItems;
+        this.totalPages = response.data.totalPages;
+      } catch (error) {
+        this.noDataText = "Nenhum usuário encontrado";
+        this.usersData = [];
+        this.totalItems = 0;
+        this.totalPages = 0;
+        Swal.fire({
+          icon: "error",
+          title: "Nenhum usuário encontrado",
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
+      }
     },
 
     generateItemsPerPageOptions() {
@@ -281,24 +318,9 @@ export default {
 
       this.itemsPerPage = this.params.itemsPerPage;
       this.listUsers();
-      console.log(this.params);
-    },
-    /* ===== CRUD ===== */
-
-    /* READ */
-    async listUsers() {
-      try {
-        const response = await Users.read(this.params);
-        this.usersData = response.data.data;
-        this.totalItems = response.data.totalItems;
-        this.totalPages = response.data.totalPages
-      } catch (error) {
-        console.error("Erro ao buscar editoras:", error);
-      }
     },
 
     /* CREATE/UPDATE */
-
     resetValidation() {
       this.$refs.form.resetValidation();
     },

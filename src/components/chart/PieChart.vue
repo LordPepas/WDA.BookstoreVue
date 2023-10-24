@@ -2,12 +2,13 @@
   <v-flex width="100">
     <div class="chart_container">
       <div class="title text-center">Status de Aluguéis</div>
-      <canvas ref="myPieChart" style="max-width: 270px; min-width: 260px; margin: auto;"></canvas>
+      <canvas ref="myPieChart" style="max-width: 270px; margin: auto"></canvas>
     </div>
   </v-flex>
 </template>
 
 <script>
+import Swal from "sweetalert2";
 import Chart from "chart.js/auto";
 import Rentals from "@/services/Rentals";
 
@@ -43,27 +44,36 @@ export default {
 
         const statusCounts = {
           "No prazo": 0,
-          "Com atraso": 0,
-          "Não devolvido": 0,
+          Atrasado: 0,
+          Pendente: 0,
         };
 
-        rentals.forEach(rental => {
+        rentals.forEach((rental) => {
           if (rental.status === "Atrasado") {
-            statusCounts["Com atraso"]++;
+            statusCounts["Atrasado"]++;
           } else if (rental.status === "No prazo") {
             statusCounts["No prazo"]++;
           } else if (rental.status === "Pendente") {
-            statusCounts["Não devolvido"]++;
+            statusCounts["Pendente"]++;
           }
         });
 
         const statusCountArray = Object.entries(statusCounts);
 
-        this.statusRentals = statusCountArray;
+        statusCountArray.sort((a, b) => b[1] - a[1]);
 
+        this.statusRentals = statusCountArray;
         this.renderPieChart();
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Nenhuma informação encontrado",
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
       }
     },
     renderPieChart() {
@@ -71,11 +81,13 @@ export default {
 
       const labels = this.statusRentals.map((item) => item[0]);
       const data = this.statusRentals.map((item) => item[1]);
+      console.log(labels, data);
       const colors = [
         "rgb(54, 162, 235)",
-        "rgb(255, 99, 132)",
         "rgb(255, 206, 86)",
+        "rgb(255, 99, 132)",
       ];
+
       const ctx = this.$refs.myPieChart.getContext("2d");
       new Chart(ctx, {
         type: "pie",

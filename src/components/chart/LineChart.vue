@@ -8,6 +8,7 @@
 </template>
 
 <script>
+import Swal from "sweetalert2";
 import Chart from "chart.js/auto";
 import Books from "@/services/Books";
 
@@ -22,25 +23,33 @@ export default {
   },
   methods: {
     async fetchTopThreeBooks() {
-  try {
-    const rentals = await Books.MostRented();
+      try {
+        const rentals = await Books.MostRented();
 
-    this.topThreeBooks = rentals.data.data.slice(0, 3).map(item => ({
-      label: item.name,
-      data: item.rented,
-    }));
-    console.log(this.topThreeBooks);
+        this.topThreeBooks = rentals.data.data.slice(0, 3).map((item) => ({
+          label: item.name,
+          data: item.rented,
+        }));
+        console.log(this.topThreeBooks);
 
-    this.renderBarChart();
-  } catch (error) {
-    console.error("Erro ao buscar dados:", error);
-  }
-},
+        this.renderBarChart();
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Nenhum livro encontrado",
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
+      }
+    },
     renderBarChart() {
       if (!this.topThreeBooks) return;
 
-      const labels = this.topThreeBooks.map(item => item.label);
-const data = this.topThreeBooks.map(item => item.data);
+      const labels = this.topThreeBooks.map((item) => item.label);
+      const data = this.topThreeBooks.map((item) => item.data);
       const ctx = this.$refs.myChart.getContext("2d");
       new Chart(ctx, {
         type: "bar",

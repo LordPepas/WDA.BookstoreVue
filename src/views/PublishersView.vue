@@ -1,42 +1,11 @@
 <template>
   <div class="d-flex flex-column justify-end align-end mt-2">
     <v-container>
-      <v-row class="d-flex align-center">
-        <v-col cols="auto">
-          <v-toolbar-title class="font-weight-medium" style="font-size: 30px"
-            >Editoras</v-toolbar-title
-          >
-        </v-col>
-        <v-col cols="auto" class="d-flex align-center mb-0">
-          <img src="@/assets/divider.svg" />
-        </v-col>
-        <v-col cols="auto">
-          <v-btn
-            class="rounded-lg px-0 v-btn v-btn--has-bg theme--dark"
-            color="blue darken-3"
-            style="height: 40px; min-width: 40px"
-            @click="openModalCreate"
-          >
-            <img src="@/assets/plus.svg" alt="" />
-          </v-btn>
-        </v-col>
-        <v-col
-          cols="12"
-          xs="12"
-          sm="5"
-          md="6"
-          lg="6"
-          class="mr-auto ml-auto mr-sm-2 mb-n6"
-        >
-          <v-text-field
-            dense
-            outlined
-            v-model="search"
-            label="Pesquisar"
-            prepend-inner-icon="mdi-magnify"
-          ></v-text-field>
-        </v-col>
-      </v-row>
+      <AppPageHeader
+        :pageTitle="pageTitle"
+        :search.sync="search"
+        @open-create-modal="openModalCreate"
+      />
 
       <!-- Tabela de Dados -->
       <v-data-table
@@ -45,7 +14,7 @@
         :header-props="headerProps"
         :sort-desc="params.orderDesc"
         :sort-by="params.orderBy"
-        :page="currentPage"
+        :page="params.pageNumber"
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
         @update:options="handleOptionsUpdate"
@@ -55,10 +24,62 @@
         }"
         mobile-breakpoint="820"
         class="align-center px-4 py-4"
-        loading="items"
-        loading-text="Carregando dados... Aguarde!"
-        no-data-text="Nenhuma Editora encontrado"
+        :no-data-text="noDataText"
       >
+        <template v-slot:[`item.name`]="{ item }">
+          <v-tooltip
+            left
+            color="light-green darken-2"
+            v-if="isTextTruncated(item.name, 16)"
+          >
+            <template v-slot:activator="{ on }">
+              <div @click="toggleFullText(item)" v-on="on">
+                {{
+                  showFullTextItem === item
+                    ? showFullText
+                      ? item.name
+                      : truncateText(item.name, 16)
+                    : truncateText(item.name, 16)
+                }}
+              </div>
+            </template>
+            <span v-if="!showFullText">Ver mais...</span>
+            <span v-if="showFullText">Ver menos...</span>
+          </v-tooltip>
+          <span v-else>
+            {{ item.name }}
+          </span>
+        </template>
+
+        <template v-slot:[`item.city`]="{ item }">
+          <v-tooltip
+            left
+            color="light-green darken-2"
+            v-if="isTextTruncated(item.city, 16)"
+          >
+            <template v-slot:activator="{ on }">
+              <div @click="toggleFullText(item)" v-on="on">
+                {{
+                  showFullTextItem === item
+                    ? showFullText
+                      ? item.city
+                      : truncateText(item.city, 16)
+                    : truncateText(item.city, 16)
+                }}
+              </div>
+            </template>
+            <span v-if="showFullTextItem === item && !showFullText"
+              >Ver mais...</span
+            >
+            <span v-if="showFullTextItem === item && showFullText"
+              >Ver menos...</span
+            >
+          </v-tooltip>
+          <span v-else>
+            {{ item.city }}
+          </span>
+        </template>
+
         <template v-slot:[`item.actions`]="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on }">
@@ -70,7 +91,7 @@
                 >mdi-storefront-edit-outline</v-icon
               >
             </template>
-            <span>Editar Editora</span>
+            <span>Editar</span>
           </v-tooltip>
 
           <v-tooltip bottom>
@@ -83,7 +104,7 @@
                 >mdi-trash-can-outline</v-icon
               >
             </template>
-            <span>Excluir Editora</span>
+            <span>Excluir</span>
           </v-tooltip>
         </template>
       </v-data-table>
@@ -140,6 +161,7 @@
 </template>
 
 <script>
+import AppPageHeader from "@/components/AppPageHeader.vue";
 import Publisher from "@/services/Publishers";
 import Swal from "sweetalert2";
 
@@ -151,10 +173,9 @@ export default {
         searchValue: "",
         orderBy: "id",
         orderDesc: false,
-        pageNumber: null,
+        pageNumber: 1,
         itemsPerPage: null,
       },
-      search: "",
       name: "",
       city: "",
       submitButtonLabel: "",
@@ -164,20 +185,6 @@ export default {
       headerProps: {
         sortByText: "Ordenar Por",
       },
-      nameRules: [
-        (v) => !!v || "O nome é obrigatório",
-        (v) =>
-          (v && v.length >= 3) || "O nome deve ter pelo menos 3 caracteres",
-        (v) =>
-          (v && v.length <= 25) || "O nome deve ter no máximo 25 caracteres",
-      ],
-      cityRules: [
-        (v) => !!v || "A cidade é obrigatória",
-        (v) =>
-          (v && v.length >= 3) || "A cidade deve ter pelo menos 3 caracteres",
-        (v) =>
-          (v && v.length <= 25) || "A cidade deve ter no máximo 25 caracteres",
-      ],
       headers: [
         {
           text: "ID",
@@ -203,29 +210,91 @@ export default {
           class: "text-md-body-1 font-weight-bold",
         },
       ],
+      nameRules: [
+        (v) => !!v || "O nome é obrigatório",
+        (v) =>
+          (v && v.length >= 3) || "O nome deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 25) || "O nome deve ter no máximo 25 caracteres",
+      ],
+      cityRules: [
+        (v) => !!v || "A cidade é obrigatória",
+        (v) =>
+          (v && v.length >= 3) || "A cidade deve ter pelo menos 3 caracteres",
+        (v) =>
+          (v && v.length <= 25) || "A cidade deve ter no máximo 25 caracteres",
+      ],
       totalItems: null,
       totalPages: null,
       sortBy: "",
-      currentPage: 1,
       itemsPerPage: 5,
+      noDataText: "Carregando dados... Aguarde!",
+      pageTitle: "Editoras",
+      search: "",
+      showFullText: false,
+      showFullTextItem: null,
     };
+  },
+  components: {
+    AppPageHeader,
   },
   mounted() {
     this.listPublishers();
   },
   watch: {
     search: {
-      handler(newSearch, oldSearch) {
-        if (newSearch !== oldSearch) {
-          this.params.pageNumber = 1;
-          this.params.searchValue = newSearch;
-          this.listPublishers();
-        }
+      handler(newSearch) {
+        this.params.pageNumber = 1;
+        this.params.searchValue = newSearch;
+        this.listPublishers();
       },
       deep: false,
     },
   },
   methods: {
+    toggleFullText(item) {
+      if (this.showFullTextItem === item) {
+        this.showFullText = !this.showFullText;
+      } else {
+        this.showFullText = true;
+        this.showFullTextItem = item;
+      }
+    },
+    isTextTruncated(text, maxLength) {
+      return text.length > maxLength;
+    },
+    truncateText(text, maxLength) {
+      return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+    },
+
+    /* ===== CRUD ===== */
+
+    /* READ */
+    async listPublishers() {
+      try {
+        const response = await Publisher.read(this.params);
+
+        this.publishersData = response.data.data;
+
+        this.totalItems = response.data.totalItems;
+        this.totalPages = response.data.totalPages;
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Nenhuma editora encontrado",
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
+        this.noDataText = "Nenhuma editora encontrado";
+        this.publishersData = [];
+        this.totalItems = 0;
+        this.totalPages = 0;
+      }
+    },
+
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
         return [5, 10, 25, this.totalPages];
@@ -242,23 +311,7 @@ export default {
 
       this.itemsPerPage = this.params.itemsPerPage;
       this.listPublishers();
-      console.log(this.params);
     },
-    /* ===== CRUD ===== */
-
-    /* READ */
-    async listPublishers() {
-      try {
-        const response = await Publisher.read(this.params);
-
-        this.publishersData = response.data.data;
-        this.totalItems = response.data.totalItems;
-        this.totalPages = response.data.totalPages;
-      } catch (error) {
-        console.error("Erro ao buscar editoras:", error);
-      }
-    },
-
     /* CREATE/UPDATE */
     resetValidation() {
       this.$refs.form.resetValidation();
@@ -391,9 +444,33 @@ export default {
       if (result.isConfirmed) {
         try {
           await Publisher.delete(publisher);
-          if (this.publishersData.length === 1) {
-            if (this.params.pageNumber > 1) {
-              location.reload();
+
+          // Verifique se há mais de uma página de itens
+          if (this.totalItems > this.params.itemsPerPage) {
+            // Atualize o número total de itens
+            this.totalItems--;
+
+            // Verifique se a página atual está além da última página possível
+            if (
+              this.params.pageNumber >
+              Math.ceil(this.totalItems / this.params.itemsPerPage)
+            ) {
+              this.params.pageNumber = Math.ceil(
+                this.totalItems / this.params.itemsPerPage
+              );
+
+              // Se a página atual estiver além da última página, mas ainda houver itens, ajuste-a
+              if (this.params.pageNumber < 1) {
+                this.params.pageNumber = 1;
+              }
+            }
+
+            // Se não houver mais itens na página atual, vá para a página anterior
+            if (this.publishersData.length === 1) {
+              if (this.params.pageNumber > 1) {
+                this.params.pageNumber--;
+
+              }
             }
           }
           this.listPublishers();

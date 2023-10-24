@@ -24,8 +24,8 @@
 
 <script>
 
-import NavBar from "./components/NavBar.vue";
-import FooTer from "./components/FooTer.vue";
+import NavBar from "./components/AppPageNavbar.vue";
+import FooTer from "./components/AppPageFooter.vue";
 
 export default {
   data: function () {

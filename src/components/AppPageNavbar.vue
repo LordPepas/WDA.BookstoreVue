@@ -6,14 +6,24 @@
         <v-img src="/altis_logo.png" width="40%"></v-img>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-menu offset-y>
-      </v-menu>
+      <v-menu offset-y> </v-menu>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer" dark app class="gradient-background">
+    <v-navigation-drawer
+      v-model="drawer"
+      absolute
+      :temporary="isMobile"
+      dark
+      app
+      class="gradient-background"
+    >
       <v-layout column align-center>
         <v-flex class="mt-5">
-          <v-img src="/logo.png" width="172px" class="mt-4 ml-4 mr-4 mb-3"></v-img>
+          <v-img
+            src="/logo.png"
+            width="172px"
+            class="mt-4 ml-4 mr-4 mb-3"
+          ></v-img>
         </v-flex>
       </v-layout>
       <v-list flat>
@@ -32,7 +42,13 @@
             </v-list-item-icon>
             <v-list-item-title>Administração</v-list-item-title>
           </template>
-          <v-list-item class="align-center" v-for="link in links" :key="link.text" :to="link.route" active-class="border">
+          <v-list-item
+            class="align-center"
+            v-for="link in links"
+            :key="link.text"
+            :to="link.route"
+            active-class="border"
+          >
             <v-list-item-action>
               <v-icon class="mr-2">{{ link.icon }}</v-icon>
             </v-list-item-action>
@@ -50,8 +66,9 @@
 export default {
   data: () => ({
     drawer: true,
+    isMobile: false,
     links: [
-      { icon: "mdi-account-group", text: "Clientes", route: "/UsersView" },
+      { icon: "mdi-account-group", text: "Usuários", route: "/UsersView" },
       { icon: "mdi-domain", text: "Editoras", route: "/PublishersView" },
       { icon: "mdi-bookshelf", text: "Livros", route: "/BooksView" },
       {
@@ -61,9 +78,19 @@ export default {
       },
     ],
   }),
+  created() {
+    this.checkScreenWidth();
+    window.addEventListener('resize', this.checkScreenWidth);
+  },
+  destroyed() {
+    window.removeEventListener('resize', this.checkScreenWidth);
+  },
   methods: {
     toggleMenu() {
       this.drawer = !this.drawer;
+    },
+    checkScreenWidth() {
+      this.isMobile = window.innerWidth < 1300;
     },
   },
 };
@@ -71,7 +98,11 @@ export default {
 
 <style scoped>
 .border {
-  background-image: linear-gradient(to right, var(--primary-dark), var(--primary));
+  background-image: linear-gradient(
+    to right,
+    var(--primary-dark),
+    var(--primary)
+  );
   border-left: 4px solid white;
   color: #1976d2;
 }
