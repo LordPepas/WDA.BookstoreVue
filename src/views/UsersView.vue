@@ -14,7 +14,7 @@
         :header-props="headerProps"
         :sort-desc="params.orderDesc"
         :sort-by="params.orderBy"
-        :page="currentPage"
+        :page="params.pageNumber"
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
         @update:options="handleOptionsUpdate"
@@ -22,30 +22,50 @@
           itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
-        mobile-breakpoint="820"
+        mobile-breakpoint="1020"
         class="align-center px-4 py-4"
         :no-data-text="noDataText"
       >
-      <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.name : truncateText(item.name, 20) }}
+        <template v-slot:[`item.name`]="{ item }">
+          <div @click="toggleFullText(item, 'name')">
+            {{
+              showFullTextItem["name"] === item
+                ? item.name
+                : truncateText(item.name, 16)
+            }}
           </div>
         </template>
+
         <template v-slot:[`item.city`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.city : truncateText(item.city, 16) }}
+          <div @click="toggleFullText(item, 'city')">
+            {{
+              showFullTextItem["city"] === item
+                ? item.city
+                : truncateText(item.city, 16)
+            }}
           </div>
         </template>
+
         <template v-slot:[`item.address`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.address : truncateText(item.address, 16) }}
+          <div @click="toggleFullText(item, 'address')">
+            {{
+              showFullTextItem["address"] === item
+                ? item.address
+                : truncateText(item.address, 16)
+            }}
           </div>
         </template>
+
         <template v-slot:[`item.email`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.email : truncateText(item.email, 20) }}
+          <div @click="toggleFullText(item, 'email')">
+            {{
+              showFullTextItem["email"] === item
+                ? item.email
+                : truncateText(item.email, 20)
+            }}
           </div>
         </template>
+
         <template v-slot:[`item.actions`]="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on }">
@@ -95,10 +115,10 @@
                   required
                 ></v-text-field>
                 <v-text-field
-                v-model="city"
-                :rules="cityRules"
-                :counter="25"
-                label="Cidade do usuário"
+                  v-model="city"
+                  :rules="cityRules"
+                  :counter="25"
+                  label="Cidade do usuário"
                   required
                 ></v-text-field>
                 <v-text-field
@@ -107,14 +127,14 @@
                   :counter="25"
                   label="Endereço do usuário"
                   required
-                  ></v-text-field>
-                  <v-text-field
-                    v-model="email"
-                    :rules="emailRules"
-                    :counter="120"
-                    label="Email do usuário"
-                    required
-                  ></v-text-field>
+                ></v-text-field>
+                <v-text-field
+                  v-model="email"
+                  :rules="emailRules"
+                  :counter="120"
+                  label="Email do usuário"
+                  required
+                ></v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <v-btn
@@ -152,7 +172,7 @@ export default {
         searchValue: "",
         orderBy: "id",
         orderDesc: false,
-        pageNumber: null,
+        pageNumber: 1,
         itemsPerPage: null,
       },
       name: "",
@@ -229,7 +249,6 @@ export default {
           (v && v.length <= 50) ||
           "O endereço deve ter no máximo 50 caracteres",
       ],
-      currentPage: 1,
       itemsPerPage: 5,
       totalItems: null,
       totalPages: null,
@@ -237,8 +256,12 @@ export default {
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Usuários",
       search: "",
-      showFullText: false,
-      fullTextItem: null,
+      showFullTextItem: {
+        name: null,
+        city: null,
+        address: null,
+        email: null,
+      },
     };
   },
   components: {
@@ -250,17 +273,20 @@ export default {
   watch: {
     search: {
       handler(newSearch) {
-          this.params.pageNumber = 1;
-          this.params.searchValue = newSearch;
-          this.listUsers();
+        this.params.pageNumber = 1;
+        this.params.searchValue = newSearch;
+        this.listUsers();
       },
       deep: false,
     },
   },
   methods: {
-    toggleFullText(item) {
-      this.showFullText = !this.showFullText;
-      this.fullTextItem = item;
+    toggleFullText(item, field) {
+      if (this.showFullTextItem[field] === item) {
+        this.$set(this.showFullTextItem, field, null);
+      } else {
+        this.$set(this.showFullTextItem, field, item);
+      }
     },
 
     truncateText(text, maxLength) {
@@ -455,14 +481,25 @@ export default {
       if (result.isConfirmed) {
         try {
           await Users.delete(user);
-          if (this.usersData.length === 1) {
-            if (this.params.pageNumber > 1) {
-              this.currentPage -= 1;
-              location.reload();
+
+          if (this.totalItems > this.params.itemsPerPage) {
+            this.totalItems--;
+
+            if (
+              this.params.pageNumber >
+              Math.ceil(this.totalItems / this.params.itemsPerPage)
+            ) {
+              this.params.pageNumber = Math.ceil(
+                this.totalItems / this.params.itemsPerPage
+              );
+
+              if (this.params.pageNumber < 1) {
+                this.params.pageNumber = 1;
+              }
             }
           }
           this.listUsers();
-          Swal.fire({
+          await Swal.fire({
             icon: "success",
             title: "Usuário Excluído com Sucesso!",
             showConfirmButton: false,
@@ -472,7 +509,7 @@ export default {
             timerProgressBar: true,
           });
         } catch (error) {
-          Swal.fire({
+          await Swal.fire({
             icon: "error",
             title: "Erro ao Excluir Usuário",
             text: error.response.data.errors,

@@ -2,13 +2,23 @@
   <v-flex width="100">
     <div class="chart_container">
       <div class="title text-center">Status de Aluguéis</div>
-      <canvas ref="myPieChart" style="max-width: 270px; margin: auto"></canvas>
+      <v-progress-circular
+        v-if="statusRentals.length === 0"
+        class="center-progress mt-14 mb-14"
+        color="blue lighten-3"
+        indeterminate
+        :size="150"
+      ></v-progress-circular>
+      <canvas
+        v-else
+        ref="myPieChart"
+        style="max-width: 270px; margin: auto"
+      ></canvas>
     </div>
   </v-flex>
 </template>
 
 <script>
-import Swal from "sweetalert2";
 import Chart from "chart.js/auto";
 import Rentals from "@/services/Rentals";
 
@@ -65,15 +75,7 @@ export default {
         this.statusRentals = statusCountArray;
         this.renderPieChart();
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Nenhuma informação encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2000,
-          timerProgressBar: true,
-        });
+        console.error("Erro ao buscar dados:", error);
       }
     },
     renderPieChart() {
@@ -116,3 +118,10 @@ export default {
   },
 };
 </script>
+<style>
+.chart_container {
+  text-align: center;
+  margin: 0 auto;
+  position: relative;
+}
+</style>

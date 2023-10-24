@@ -16,7 +16,7 @@
         :sort-by="params.orderBy"
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
-        :page="currentPage"
+        :page="params.pageNumber"
         @update:options="handleOptionsUpdate"
         :footer-props="{
           itemsPerPageOptions: generateItemsPerPageOptions(),
@@ -26,21 +26,34 @@
         class="align-center px-4 py-4"
         :no-data-text="noDataText"
       >
-      <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.name : truncateText(item.name, 20) }}
+        <template v-slot:[`item.name`]="{ item }">
+          <div @click="toggleFullText(item, 'name')">
+            {{
+              showFullTextItem["name"] === item
+                ? item.name
+                : truncateText(item.name, 16)
+            }}
           </div>
         </template>
         <template v-slot:[`item.author`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.author : truncateText(item.author, 16) }}
+          <div @click="toggleFullText(item, 'author')">
+            {{
+              showFullTextItem["author"] === item
+                ? item.author
+                : truncateText(item.author, 16)
+            }}
           </div>
         </template>
         <template v-slot:[`item.publisher.name`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{ showFullText ? item.publisher.name : truncateText(item.publisher.name, 16) }}
+          <div @click="toggleFullText(item, 'publisher.name')">
+            {{
+              showFullTextItem["publisher.name"] === item
+                ? item.publisher.name
+                : truncateText(item.publisher.name, 16)
+            }}
           </div>
         </template>
+
         <template v-slot:[`item.actions`]="{ item }">
           <v-tooltip bottom>
             <template v-slot:activator="{ on }">
@@ -52,7 +65,7 @@
                 >mdi-notebook-edit-outline</v-icon
               >
             </template>
-            <span>Editar Livro</span>
+            <span>Editar</span>
           </v-tooltip>
 
           <v-tooltip bottom>
@@ -65,7 +78,7 @@
                 >mdi-trash-can-outline</v-icon
               >
             </template>
-            <span>Excluir Livro</span>
+            <span>Excluir</span>
           </v-tooltip>
         </template>
       </v-data-table>
@@ -150,10 +163,10 @@
 </template>
 
 <script>
-import Swal from "sweetalert2";
+import AppPageHeader from "@/components/AppPageHeader";
 import Books from "@/services/Books";
 import Publisher from "@/services/Publishers";
-import AppPageHeader from "@/components/AppPageHeader";
+import Swal from "sweetalert2";
 
 export default {
   data() {
@@ -162,9 +175,9 @@ export default {
       publishersData: [],
       params: {
         searchValue: "",
+        pageNumber: 1,
         orderBy: "id",
         orderDesc: false,
-        pageNumber: null,
         itemsPerPage: null,
       },
       name: "",
@@ -172,8 +185,8 @@ export default {
       author: "",
       quantity: "",
       release: "",
-      dialogVisible: false,
       submitButtonLabel: "",
+      dialogVisible: false,
       selectedBookId: null,
       isSubmitDisabled: true,
       headerProps: {
@@ -237,7 +250,7 @@ export default {
         (v) =>
           (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
         (v) =>
-        (v && v.length <= 45) || "O título deve ter no máximo 45 caracteres",
+          (v && v.length <= 45) || "O título deve ter no máximo 45 caracteres",
       ],
       authorRules: [
         (v) => !!v || "O autor é obrigatório",
@@ -256,7 +269,6 @@ export default {
         (v) => v >= 0 || "A quantidade nao deve ser menor que um",
         (v) => v <= 100 || "A quantidade deve ser menor que cem",
       ],
-      currentPage: 1,
       totalItems: 0,
       totalPages: 0,
       sortBy: "",
@@ -264,8 +276,13 @@ export default {
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Livros",
       search: "",
-      showFullText: false,
-      fullTextItem: null,
+      showFullTextItem: {
+        name: null,
+        author: null,
+        publisher: {
+          name: null,
+        },
+      },
     };
   },
   components: {
@@ -276,29 +293,27 @@ export default {
   },
   watch: {
     search: {
-      handler(newSearch, oldSearch) {
-        if (newSearch !== oldSearch) {
-          this.params.pageNumber = 1;
-          this.params.searchValue = newSearch;
-          this.listBooks();
-        }
+      handler(newSearch) {
+        this.params.pageNumber = 1;
+        this.params.searchValue = newSearch;
+        this.listBooks();
       },
       deep: false,
     },
   },
   methods: {
-    getCurrentYear() {
-      const currentYear = new Date().getFullYear();
-      return currentYear;
-    },
-    toggleFullText(item) {
-      this.showFullText = !this.showFullText;
-      this.fullTextItem = item;
+    toggleFullText(item, field) {
+      if (this.showFullTextItem[field] === item) {
+        this.$set(this.showFullTextItem, field, null);
+      } else {
+        this.$set(this.showFullTextItem, field, item);
+      }
     },
 
     truncateText(text, maxLength) {
       return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
     },
+
     /* ===== CRUD ===== */
 
     /* READ */
@@ -311,7 +326,7 @@ export default {
         this.totalItems = booksResponse.data.totalItems;
         this.totalPages = booksResponse.data.totalPages;
       } catch (error) {
-        Swal.fire({
+        await Swal.fire({
           icon: "error",
           title: "Nenhum livro encontrado",
           showConfirmButton: false,
@@ -354,7 +369,6 @@ export default {
       this.params.itemsPerPage = options.itemsPerPage;
       this.params.pageNumber = options.page;
 
-      this.currentpage = options.page;
       this.itemsPerPage = this.params.itemsPerPage;
       this.listBooks();
     },
@@ -389,7 +403,6 @@ export default {
     openModalUpdate(book) {
       this.dialogVisible = true;
       this.isSubmitDisabled = true;
-      this.submitButtonLabel = "Atualizar";
       this.selectedBookId = book.id;
       this.name = book.name;
       this.author = book.author;
@@ -399,6 +412,7 @@ export default {
       this.publishers = selectedPublisher.name;
       this.release = book.release;
       this.quantity = book.quantity;
+      this.submitButtonLabel = "Atualizar";
     },
 
     async submitAction() {
@@ -420,7 +434,7 @@ export default {
         };
 
         try {
-          if (this.selectedBookId == null) {
+          if (!this.selectedBookId) {
             try {
               const response = await Books.create(bookData);
               this.booksData.push({ id: response.data.id, ...bookData });
@@ -461,7 +475,6 @@ export default {
                   return book;
                 }
               });
-              this.closeModal();
               this.listBooks();
               Swal.fire({
                 icon: "success",
@@ -516,12 +529,7 @@ export default {
       if (result.isConfirmed) {
         try {
           await Books.delete(book.id);
-          if (this.booksData.length === 1) {
-            if (this.params.pageNumber > 1) {
-              this.currentPage -= 1;
-              location.reload();
-            }
-          }
+
           this.listBooks();
           Swal.fire({
             icon: "success",
@@ -536,7 +544,7 @@ export default {
           Swal.fire({
             icon: "error",
             title: "Erro ao excluir o livro",
-            text: error.response.data.errors, // Certifique-se de que a mensagem de erro esteja acessível
+            text: error.response.data.errors,
             showConfirmButton: false,
             toast: true,
             position: "top-end",

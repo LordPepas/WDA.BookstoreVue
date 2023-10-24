@@ -22,62 +22,28 @@
           itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
-        mobile-breakpoint="820"
+        mobile-breakpoint="1020"
         class="align-center px-4 py-4"
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.name`]="{ item }">
-          <v-tooltip
-            left
-            color="light-green darken-2"
-            v-if="isTextTruncated(item.name, 16)"
-          >
-            <template v-slot:activator="{ on }">
-              <div @click="toggleFullText(item)" v-on="on">
-                {{
-                  showFullTextItem === item
-                    ? showFullText
-                      ? item.name
-                      : truncateText(item.name, 16)
-                    : truncateText(item.name, 16)
-                }}
-              </div>
-            </template>
-            <span v-if="!showFullText">Ver mais...</span>
-            <span v-if="showFullText">Ver menos...</span>
-          </v-tooltip>
-          <span v-else>
-            {{ item.name }}
-          </span>
+          <div @click="toggleFullText(item, 'name')">
+            {{
+              showFullTextItem["name"] === item
+                ? item.name
+                : truncateText(item.name, 16)
+            }}
+          </div>
         </template>
 
         <template v-slot:[`item.city`]="{ item }">
-          <v-tooltip
-            left
-            color="light-green darken-2"
-            v-if="isTextTruncated(item.city, 16)"
-          >
-            <template v-slot:activator="{ on }">
-              <div @click="toggleFullText(item)" v-on="on">
-                {{
-                  showFullTextItem === item
-                    ? showFullText
-                      ? item.city
-                      : truncateText(item.city, 16)
-                    : truncateText(item.city, 16)
-                }}
-              </div>
-            </template>
-            <span v-if="showFullTextItem === item && !showFullText"
-              >Ver mais...</span
-            >
-            <span v-if="showFullTextItem === item && showFullText"
-              >Ver menos...</span
-            >
-          </v-tooltip>
-          <span v-else>
-            {{ item.city }}
-          </span>
+          <div @click="toggleFullText(item, 'city')">
+            {{
+              showFullTextItem["city"] === item
+                ? item.city
+                : truncateText(item.city, 16)
+            }}
+          </div>
         </template>
 
         <template v-slot:[`item.actions`]="{ item }">
@@ -171,9 +137,9 @@ export default {
       publishersData: [],
       params: {
         searchValue: "",
+        pageNumber: 1,
         orderBy: "id",
         orderDesc: false,
-        pageNumber: 1,
         itemsPerPage: null,
       },
       name: "",
@@ -231,8 +197,10 @@ export default {
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Editoras",
       search: "",
-      showFullText: false,
-      showFullTextItem: null,
+      showFullTextItem: {
+        name: null,
+        city: null,
+      },
     };
   },
   components: {
@@ -252,17 +220,14 @@ export default {
     },
   },
   methods: {
-    toggleFullText(item) {
-      if (this.showFullTextItem === item) {
-        this.showFullText = !this.showFullText;
+    toggleFullText(item, field) {
+      if (this.showFullTextItem[field] === item) {
+        this.$set(this.showFullTextItem, field, null); 
       } else {
-        this.showFullText = true;
-        this.showFullTextItem = item;
+        this.$set(this.showFullTextItem, field, item);
       }
     },
-    isTextTruncated(text, maxLength) {
-      return text.length > maxLength;
-    },
+
     truncateText(text, maxLength) {
       return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
     },
@@ -312,6 +277,7 @@ export default {
       this.itemsPerPage = this.params.itemsPerPage;
       this.listPublishers();
     },
+
     /* CREATE/UPDATE */
     resetValidation() {
       this.$refs.form.resetValidation();
@@ -401,6 +367,8 @@ export default {
                 return publisher;
               }
             });
+            this.closeModal();
+            this.listPublishers();
             Swal.fire({
               icon: "success",
               title: "Editora atualizada com Sucesso!",
@@ -410,8 +378,6 @@ export default {
               position: "top-end",
               timerProgressBar: true,
             });
-            this.closeModal();
-            this.listPublishers();
           } catch (error) {
             Swal.fire({
               icon: "error",
@@ -445,12 +411,9 @@ export default {
         try {
           await Publisher.delete(publisher);
 
-          // Verifique se há mais de uma página de itens
           if (this.totalItems > this.params.itemsPerPage) {
-            // Atualize o número total de itens
             this.totalItems--;
 
-            // Verifique se a página atual está além da última página possível
             if (
               this.params.pageNumber >
               Math.ceil(this.totalItems / this.params.itemsPerPage)
@@ -459,22 +422,13 @@ export default {
                 this.totalItems / this.params.itemsPerPage
               );
 
-              // Se a página atual estiver além da última página, mas ainda houver itens, ajuste-a
               if (this.params.pageNumber < 1) {
                 this.params.pageNumber = 1;
               }
             }
-
-            // Se não houver mais itens na página atual, vá para a página anterior
-            if (this.publishersData.length === 1) {
-              if (this.params.pageNumber > 1) {
-                this.params.pageNumber--;
-
-              }
-            }
           }
           this.listPublishers();
-          await Swal.fire({
+          Swal.fire({
             icon: "success",
             title: "Editora Excluída com Sucesso!",
             showConfirmButton: false,
@@ -484,14 +438,14 @@ export default {
             timerProgressBar: true,
           });
         } catch (error) {
-          await Swal.fire({
+          Swal.fire({
             icon: "error",
             title: "Erro ao Excluir Editora",
             text: error.response.data.errors,
             showConfirmButton: false,
-            timer: 3000,
             toast: true,
             position: "top-end",
+            timer: 3000,
             timerProgressBar: true,
           });
         }

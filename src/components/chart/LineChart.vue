@@ -1,14 +1,20 @@
 <template>
   <v-flex>
-    <div class="chart_container">
+    <div class="chart_container" center>
       <div class="title text-center">Livros mais alugados</div>
-      <canvas ref="myChart" width="400" height="400"></canvas>
+      <v-progress-circular
+        v-if="topThreeBooks.length === 0"
+        class="center-progress mt-16 mb-16"
+        color="blue lighten-3"
+        indeterminate
+        :size="150"
+      ></v-progress-circular>
+      <canvas v-else ref="myChart"></canvas>
     </div>
   </v-flex>
 </template>
 
 <script>
-import Swal from "sweetalert2";
 import Chart from "chart.js/auto";
 import Books from "@/services/Books";
 
@@ -34,15 +40,7 @@ export default {
 
         this.renderBarChart();
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Nenhum livro encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2000,
-          timerProgressBar: true,
-        });
+        console.error("Erro ao buscar dados:", error);
       }
     },
     renderBarChart() {
@@ -96,3 +94,10 @@ export default {
   },
 };
 </script>
+<style>
+.chart_container {
+  text-align: center;
+  margin: 0 auto;
+  position: relative;
+}
+</style>

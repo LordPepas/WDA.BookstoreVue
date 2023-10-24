@@ -23,27 +23,25 @@
                 width="130"
                 height="130"
               >
-              <v-icon size="38" color="teal darken-3">{{
-                list.icon
-                  }}</v-icon>
+                <v-icon size="38" color="teal darken-3">{{ list.icon }}</v-icon>
                 <v-card-text class="text-lg-h7 mt-n3" size="40">
                   <span class="blue-grey--text font-weight-medium">{{
                     list.title
                   }}</span>
                 </v-card-text>
-                
+
                 <router-link :to="list.route" class="no-decoration">
-                <v-btn
-                  absolute
-                  color="teal darken-3"
-                  class="white--text center-button"
-                  fab
-                  left
-                  style="z-index: 3"
-                >
-                {{ list.count }}
-              </v-btn>
-            </router-link>
+                  <v-btn
+                    absolute
+                    color="teal darken-3"
+                    class="white--text center-button"
+                    fab
+                    left
+                    style="z-index: 3"
+                  >
+                    {{ list.count }}
+                  </v-btn>
+                </router-link>
               </v-card>
             </v-col>
           </v-row>
@@ -53,7 +51,7 @@
                 <LineChart />
               </v-card>
             </v-col>
-            <v-col cols="auto" style="margin: auto;">
+            <v-col cols="auto" style="margin: auto">
               <v-card class="mt-2 card-graph lastRental">
                 <v-card-title class="center mt-n6" color="teal darken-3">
                   <v-icon color="teal darken-3">mdi-book</v-icon>
@@ -63,8 +61,16 @@
                   class="text-h6 mt-n4 center blue-grey--text font-weight-medium"
                 >
                   {{ lastRental }}
+                  <v-progress-linear
+                    v-if="lastRental === null"
+                    class="mt-4"
+                    color="blue lighten-3"
+                    indeterminate
+                    :size="50"
+                  ></v-progress-linear>
                 </v-card-text>
               </v-card>
+
               <v-card class="card-graph-two mt-3">
                 <PieChart />
               </v-card>
@@ -83,6 +89,7 @@ import Publishers from "@/services/Publishers";
 import Users from "@/services/Users";
 import Books from "@/services/Books";
 import Rentals from "@/services/Rentals";
+import Swal from "sweetalert2";
 
 export default {
   name: "DashboardView",
@@ -137,7 +144,6 @@ export default {
         this.lists[2].count = books.data.totalItems;
         this.lists[3].count = rentals.data.totalItems;
 
-        
         const lastRental = rentals.data.data.reduce((prev, current) => {
           return prev.id < current.id ? current : prev;
         });
@@ -145,7 +151,15 @@ export default {
           ? lastRental.book.name
           : "Não há registros de aluguéis";
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
+        await Swal.fire({
+          icon: "error",
+          title: "Nenhuma informação encontrado",
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          timerProgressBar: true,
+        });
       }
     },
   },
@@ -278,6 +292,4 @@ export default {
     margin-top: 32px;
   }
 }
-
-
 </style>

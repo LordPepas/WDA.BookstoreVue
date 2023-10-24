@@ -16,7 +16,7 @@
         :sort-by="params.orderBy"
         :server-items-length="totalItems"
         :items-per-page="itemsPerPage"
-        :page="currentPage"
+        :page="params.pageNumber"
         @update:options="handleOptionsUpdate"
         :footer-props="{
           itemsPerPageOptions: generateItemsPerPageOptions(),
@@ -26,26 +26,34 @@
         class="align-center px-4 py-4"
         :no-data-text="noDataText"
       >
-        <template v-slot:[`item.book.name`]="{ item }">
-          <div @click="toggleFullText(item)">
-            {{
-              showFullText ? item.book.name : truncateText(item.book.name, 16)
-            }}
-          </div>
-        </template>
         <template v-slot:[`item.user.name`]="{ item }">
-          <div @click="toggleFullText(item)">
+          <div @click="toggleFullText(item, 'user.name')">
             {{
-              showFullText ? item.user.name : truncateText(item.user.name, 16)
+              showFullTextItem["user.name"] === item
+                ? item.user.name
+                : truncateText(item.user.name, 16)
             }}
           </div>
         </template>
+
+        <template v-slot:[`item.book.name`]="{ item }">
+          <div @click="toggleFullText(item, 'book.name')">
+            {{
+              showFullTextItem["book.name"] === item
+                ? item.book.name
+                : truncateText(item.book.name, 16)
+            }}
+          </div>
+        </template>
+
         <template v-slot:[`item.rentalDate`]="{ item }">
           {{ formatDate(item.rentalDate) }}
         </template>
+
         <template v-slot:[`item.previsionDate`]="{ item }">
           {{ formatDate(item.previsionDate) }}
         </template>
+
         <template v-slot:[`item.returnDate`]="{ item }">
           {{ item.returnDate ? formatDate(item.returnDate) : "Não devolvido" }}
         </template>
@@ -57,7 +65,7 @@
                 variant="plain"
                 v-if="
                   item.status === 'Pendente' &&
-                  formatDate(item.previsionDate) < formatDate(date)
+                  formatDate(item.previsionDate) < todayDate()
                 "
                 color="warning"
                 @click="openModalReturn(item)"
@@ -66,7 +74,7 @@
                 mdi-book-clock-outline
               </v-icon>
             </template>
-            <span>Devolver Livro em atraso</span>
+            <span>Devolver com atraso</span>
           </v-tooltip>
 
           <v-tooltip bottom>
@@ -81,7 +89,7 @@
                 mdi-book-arrow-up-outline
               </v-icon>
             </template>
-            <span>Devolver Livro</span>
+            <span>Devolver</span>
           </v-tooltip>
 
           <v-tooltip bottom>
@@ -96,7 +104,7 @@
                 mdi-trash-can-outline
               </v-icon>
             </template>
-            <span>Excluir Aluguel</span>
+            <span>Excluir</span>
           </v-tooltip>
         </template>
 
@@ -227,11 +235,12 @@
 </template>
 
 <script>
-import Rentals from "@/services/Rentals";
-import Books from "@/services/Books";
-import Users from "@/services/Users";
-import Swal from "sweetalert2";
 import AppPageHeader from "@/components/AppPageHeader.vue";
+import Books from "@/services/Books";
+import Rentals from "@/services/Rentals";
+import Swal from "sweetalert2";
+import Users from "@/services/Users";
+
 export default {
   data() {
     return {
@@ -245,9 +254,6 @@ export default {
         pageNumber: null,
         itemsPerPage: null,
       },
-      menu1: "",
-      menu2: "",
-      date: "",
       selectedBook: null,
       selectedUser: null,
       rentalDate: "",
@@ -311,7 +317,8 @@ export default {
       selectedUserRules: [(v) => !!v || "O usuário é obrigatório"],
       dateFormattedRules: [(v) => !!v || "A data de aluguel é obrigatório"],
       previsaoDateRules: [(v) => !!v || "A data de previsão é obrigatório"],
-      currentPage: 1,
+      menu1: "",
+      menu2: "",
       totalItems: 0,
       totalPages: 0,
       sortBy: "",
@@ -321,6 +328,14 @@ export default {
       search: "",
       showFullText: false,
       fullTextItem: null,
+      showFullTextItem: {
+        user: {
+          name: null
+        },
+        book: {
+          name: null
+        },
+      },
     };
   },
   components: {
@@ -339,7 +354,6 @@ export default {
             this.params.pageNumber = 1;
             this.params.searchValue = this.parseDateISO(newSearch);
           } else if (newSearch.match(/^\d{1,2}\/$/)) {
-            // Formato dd/
             this.params.pageNumber = 1;
             this.params.searchValue = this.parseDateISO(newSearch);
           } else {
@@ -352,12 +366,15 @@ export default {
       },
       deep: false,
     },
+
     aluguelDate(newValue) {
       this.rentalDate = this.formatDate(newValue);
     },
+
     previsaoDate(newValue) {
       this.previsionDate = this.formatDate(newValue);
     },
+
     date() {
       this.rentalDate = this.parseDateISO(this.dateRentFormatted);
     },
@@ -374,6 +391,7 @@ export default {
       }
       return null;
     },
+
     formattedPrevisionDate() {
       if (this.previsionDate) {
         const date = new Date(this.previsionDate + "T00:00:00Z");
@@ -386,24 +404,31 @@ export default {
       return null;
     },
   },
-  toggleFullText(item) {
-    this.showFullText = !this.showFullText;
-    this.fullTextItem = item;
-  },
-
-  truncateText(text, maxLength) {
-    return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
-  },
+  
   methods: {
+    toggleFullText(item, field) {
+      if (this.showFullTextItem[field] === item) {
+        this.$set(this.showFullTextItem, field, null);
+      } else {
+        this.$set(this.showFullTextItem, field, item);
+      }
+    },
+  
+    truncateText(text, maxLength) {
+      return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+    },
+
     previsionDateMax() {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 28);
       return futureDate.toISOString().substr(0, 10);
     },
+
     todayDate() {
       const brazilCurrentDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
       return brazilCurrentDate.toISOString().substr(0, 10);
     },
+
     getStatusColor(item) {
       if (item.status == "Atrasado") {
         return "error";
@@ -413,6 +438,7 @@ export default {
         return "warning";
       }
     },
+    
     formatDate(date) {
       if (!date) return null;
 
@@ -425,40 +451,31 @@ export default {
       const parts = date.split("/");
       let formattedDate = "";
 
-
       if (parts.length === 3) {
-    if (parts[2].length === 4) {
-      // Formato completo: dd/mm/yyyy
-      formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    } else if (parts[1].length === 4) {
-      // Formato dd/mm/yyyy onde ano tem 4 dígitos
-      formattedDate = `${parts[1]}-${parts[0]}`;
-    } else {
-      // Formato mm/yyyy ou dd/yyyy onde ano tem menos de 4 dígitos
-      formattedDate = parts[0];
-    }
-  } else if (parts.length === 2) {
-    if (parts[1].length === 4) {
-      // Formato dd/mm/yyyy onde ano tem 4 dígitos
-      formattedDate = `${parts[1]}-${parts[0]}`;
-    } else {
-      // Formato dd/mm ou mm/yyyy onde ano tem menos de 4 dígitos
-      formattedDate = parts[0];
-    }
-  } else if (parts.length === 1) {
-    // Formato dd/ ou yyyy
-    formattedDate = parts[0];
-  }
+        if (parts[2].length === 4) {
+          // Formato completo: dd/mm/yyyy
+          formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else if (parts[1].length === 4) {
+          // Formato dd/mm/yyyy onde ano tem 4 dígitos
+          formattedDate = `${parts[1]}-${parts[0]}`;
+        } else {
+          // Formato mm/yyyy ou dd/yyyy onde ano tem menos de 4 dígitos
+          formattedDate = parts[0];
+        }
+      } else if (parts.length === 2) {
+        if (parts[1].length === 4) {
+          // Formato dd/mm/yyyy onde ano tem 4 dígitos
+          formattedDate = `${parts[1]}-${parts[0]}`;
+        } else {
+          // Formato dd/mm ou mm/yyyy onde ano tem menos de 4 dígitos
+          formattedDate = parts[0];
+        }
+      } else if (parts.length === 1) {
+        // Formato dd/ ou yyyy
+        formattedDate = parts[0];
+      }
       console.log(Math.floor(Math.random() * 5) + 1);
       return formattedDate;
-    },
-
-    toggleFullText(item) {
-      this.showFullText = !this.showFullText;
-      this.fullTextItem = item;
-    },
-    truncateText(text, maxLength) {
-      return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
     },
 
     /* ===== CRUD ===== */
@@ -471,6 +488,7 @@ export default {
         this.rentalsData = rentalsResponse.data.data;
         this.totalItems = rentalsResponse.data.totalItems;
         this.totalPages = rentalsResponse.data.totalPages;
+        console.log(this.params.searchValue);
       } catch (error) {
         this.noDataText = "Nenhum Aluguel encontrado";
         this.rentalsData = [];
