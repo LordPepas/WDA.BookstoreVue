@@ -1,15 +1,15 @@
 <template>
   <v-flex>
-    <div class="chart_container" center>
+    <div class="chart_container">
       <div class="title text-center">Livros mais alugados</div>
-      <v-progress-circular
+      <!-- <v-progress-circular
         v-if="topThreeBooks.length === 0"
         class="center-progress mt-16 mb-16"
         color="blue lighten-3"
         indeterminate
         :size="150"
-      ></v-progress-circular>
-      <canvas v-else ref="myChart"></canvas>
+      ></v-progress-circular> -->
+      <canvas ref="myChart" width="400" height="400"></canvas>
     </div>
   </v-flex>
 </template>

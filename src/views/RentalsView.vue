@@ -65,7 +65,7 @@
                 variant="plain"
                 v-if="
                   item.status === 'Pendente' &&
-                  formatDate(item.previsionDate) < todayDate()
+                  item.previsionDate < todayDate()
                 "
                 color="warning"
                 @click="openModalReturn(item)"
@@ -251,7 +251,7 @@ export default {
         searchValue: "",
         orderBy: "id",
         orderDesc: false,
-        pageNumber: null,
+        pageNumber: 1,
         itemsPerPage: null,
       },
       selectedBook: null,
@@ -330,10 +330,10 @@ export default {
       fullTextItem: null,
       showFullTextItem: {
         user: {
-          name: null
+          name: null,
         },
         book: {
-          name: null
+          name: null,
         },
       },
     };
@@ -404,7 +404,7 @@ export default {
       return null;
     },
   },
-  
+
   methods: {
     toggleFullText(item, field) {
       if (this.showFullTextItem[field] === item) {
@@ -413,7 +413,7 @@ export default {
         this.$set(this.showFullTextItem, field, item);
       }
     },
-  
+
     truncateText(text, maxLength) {
       return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
     },
@@ -438,7 +438,7 @@ export default {
         return "warning";
       }
     },
-    
+
     formatDate(date) {
       if (!date) return null;
 
@@ -453,25 +453,19 @@ export default {
 
       if (parts.length === 3) {
         if (parts[2].length === 4) {
-          // Formato completo: dd/mm/yyyy
           formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
         } else if (parts[1].length === 4) {
-          // Formato dd/mm/yyyy onde ano tem 4 dígitos
           formattedDate = `${parts[1]}-${parts[0]}`;
         } else {
-          // Formato mm/yyyy ou dd/yyyy onde ano tem menos de 4 dígitos
           formattedDate = parts[0];
         }
       } else if (parts.length === 2) {
         if (parts[1].length === 4) {
-          // Formato dd/mm/yyyy onde ano tem 4 dígitos
           formattedDate = `${parts[1]}-${parts[0]}`;
         } else {
-          // Formato dd/mm ou mm/yyyy onde ano tem menos de 4 dígitos
           formattedDate = parts[0];
         }
       } else if (parts.length === 1) {
-        // Formato dd/ ou yyyy
         formattedDate = parts[0];
       }
       console.log(Math.floor(Math.random() * 5) + 1);
@@ -662,6 +656,23 @@ export default {
           const response = await Rentals.delete(this.updateRental);
 
           if (response.status === 200) {
+            if (this.totalItems > this.params.itemsPerPage) {
+              this.totalItems--;
+
+              if (
+                this.params.pageNumber >
+                Math.ceil(this.totalItems / this.params.itemsPerPage)
+              ) {
+                this.params.pageNumber = Math.ceil(
+                  this.totalItems / this.params.itemsPerPage
+                );
+
+                if (this.params.pageNumber < 1) {
+                  this.params.pageNumber = 1;
+                }
+              }
+            }
+
             this.listRentals();
             Swal.fire({
               icon: "success",

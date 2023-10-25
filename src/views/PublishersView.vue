@@ -261,10 +261,10 @@ export default {
     },
 
     generateItemsPerPageOptions() {
-      if (this.totalPages > 25) {
-        return [5, 10, 25, this.totalPages];
+      if (this.totalItems > 10) {
+        return [5, 10,this.totalItems];
       } else {
-        return [5, 10, 25];
+        return [5, 10];
       }
     },
 
@@ -330,6 +330,8 @@ export default {
               id: response.data.id,
               ...publisherData,
             });
+            this.closeModal();
+            this.listPublishers();
             Swal.fire({
               icon: "success",
               title: "Editora adicionada com Sucesso!",
@@ -339,8 +341,6 @@ export default {
               position: "top-end",
               timerProgressBar: true,
             });
-            this.closeModal();
-            this.listPublishers();
           } catch (error) {
             Swal.fire({
               icon: "error",

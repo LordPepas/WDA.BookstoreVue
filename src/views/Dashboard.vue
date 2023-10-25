@@ -99,7 +99,7 @@ export default {
       lists: [
         {
           icon: "mdi-account-group",
-          title: "Clientes",
+          title: "Usuários",
           count: 0,
           route: "/UsersView",
         },
@@ -110,13 +110,13 @@ export default {
           route: "/PublishersView",
         },
         {
-          icon: "mdi-book-open-page-variant",
+          icon: "mdi-bookshelf",
           title: "Livros",
           count: 0,
           route: "/BooksView",
         },
         {
-          icon: "mdi-book-account",
+          icon: "mdi-calendar-text-outline",
           title: "Aluguéis",
           count: 0,
           route: "/RentalsView",

@@ -112,6 +112,7 @@
                   :rules="nameRules"
                   :counter="45"
                   label="Nome do usuário"
+                  append-icon="mdi-account"
                   required
                 ></v-text-field>
                 <v-text-field
@@ -119,6 +120,7 @@
                   :rules="cityRules"
                   :counter="25"
                   label="Cidade do usuário"
+                  append-icon="mdi-city-variant-outline"
                   required
                 ></v-text-field>
                 <v-text-field
@@ -126,6 +128,7 @@
                   :rules="addressRules"
                   :counter="25"
                   label="Endereço do usuário"
+                  append-icon="mdi-map-marker-outline"
                   required
                 ></v-text-field>
                 <v-text-field
@@ -133,6 +136,7 @@
                   :rules="emailRules"
                   :counter="120"
                   label="Email do usuário"
+                  append-icon="mdi-email-outline"
                   required
                 ></v-text-field>
                 <v-card-actions>
@@ -246,8 +250,8 @@ export default {
         (v) =>
           (v && v.length >= 3) || "O endereço deve ter pelo menos 3 caracteres",
         (v) =>
-          (v && v.length <= 50) ||
-          "O endereço deve ter no máximo 50 caracteres",
+          (v && v.length <= 25) ||
+          "O endereço deve ter no máximo 25 caracteres",
       ],
       itemsPerPage: 5,
       totalItems: null,

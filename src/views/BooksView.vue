@@ -476,6 +476,7 @@ export default {
                 }
               });
               this.listBooks();
+              this.closeModal();
               Swal.fire({
                 icon: "success",
                 title: "Livro atualizado com Sucesso!",

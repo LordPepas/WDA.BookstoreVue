@@ -2,18 +2,14 @@
   <v-flex width="100">
     <div class="chart_container">
       <div class="title text-center">Status de Aluguéis</div>
-      <v-progress-circular
+      <!-- <v-progress-circular
         v-if="statusRentals.length === 0"
         class="center-progress mt-14 mb-14"
         color="blue lighten-3"
         indeterminate
         :size="150"
-      ></v-progress-circular>
-      <canvas
-        v-else
-        ref="myPieChart"
-        style="max-width: 270px; margin: auto"
-      ></canvas>
+      ></v-progress-circular> -->
+      <canvas ref="myPieChart" style="max-width: 270px; margin: auto"></canvas>
     </div>
   </v-flex>
 </template>
@@ -54,8 +50,8 @@ export default {
 
         const statusCounts = {
           "No prazo": 0,
-          Atrasado: 0,
-          Pendente: 0,
+          "Atrasado": 0,
+          "Pendente": 0,
         };
 
         rentals.forEach((rental) => {
@@ -85,9 +81,9 @@ export default {
       const data = this.statusRentals.map((item) => item[1]);
       console.log(labels, data);
       const colors = [
-        "rgb(54, 162, 235)",
-        "rgb(255, 206, 86)",
-        "rgb(255, 99, 132)",
+        "rgb(255, 206, 86)", 
+        "rgb(54, 162, 235)", 
+        "rgb(255, 99, 132)",  
       ];
 
       const ctx = this.$refs.myPieChart.getContext("2d");
@@ -118,6 +114,7 @@ export default {
   },
 };
 </script>
+
 <style>
 .chart_container {
   text-align: center;
