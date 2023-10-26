@@ -36,11 +36,10 @@ export default {
           label: item.name,
           data: item.rented,
         }));
-        console.log(this.topThreeBooks);
 
         this.renderBarChart();
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
+        console.error("Erro ao buscar os livros mais alugados:", error);
       }
     },
     renderBarChart() {

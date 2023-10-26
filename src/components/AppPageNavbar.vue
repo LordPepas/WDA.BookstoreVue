@@ -80,10 +80,10 @@ export default {
   }),
   created() {
     this.checkScreenWidth();
-    window.addEventListener('resize', this.checkScreenWidth);
+    window.addEventListener("resize", this.checkScreenWidth);
   },
   destroyed() {
-    window.removeEventListener('resize', this.checkScreenWidth);
+    window.removeEventListener("resize", this.checkScreenWidth);
   },
   methods: {
     toggleMenu() {

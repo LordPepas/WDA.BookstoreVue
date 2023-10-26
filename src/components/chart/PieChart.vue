@@ -44,8 +44,9 @@ export default {
       try {
         const rentalsResponse = await Rentals.read();
         this.params.itemsPerPage = rentalsResponse.data.totalItems;
-      } catch (error) {
-        console.error("Erro ao buscar o número total de itens:", error);
+      }
+      catch (error) {
+        console.error("Erro ao buscar Status de aluguéis:", error);
       }
     },
     async fetchStatus() {

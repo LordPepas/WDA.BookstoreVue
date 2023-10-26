@@ -51,7 +51,7 @@ export default {
   },
   watch: {
     localSearch(newSearch) {
-      this.$emit("update:search", newSearch); // Emitir evento para atualizar a propriedade no componente pai
+      this.$emit("update:search", newSearch);
     },
   },
   methods: {

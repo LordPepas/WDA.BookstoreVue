@@ -27,7 +27,7 @@
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name')">
+          <div @click="toggleFullText(item, 'name', 16)">
             {{
               showFullTextItem["name"] === item
                 ? item.name
@@ -37,7 +37,7 @@
         </template>
 
         <template v-slot:[`item.city`]="{ item }">
-          <div @click="toggleFullText(item, 'city')">
+          <div @click="toggleFullText(item, 'city', 16)">
             {{
               showFullTextItem["city"] === item
                 ? item.city
@@ -47,7 +47,7 @@
         </template>
 
         <template v-slot:[`item.address`]="{ item }">
-          <div @click="toggleFullText(item, 'address')">
+          <div @click="toggleFullText(item, 'address', 16)">
             {{
               showFullTextItem["address"] === item
                 ? item.address
@@ -57,7 +57,7 @@
         </template>
 
         <template v-slot:[`item.email`]="{ item }">
-          <div @click="toggleFullText(item, 'email')">
+          <div @click="toggleFullText(item, 'email', 16)">
             {{
               showFullTextItem["email"] === item
                 ? item.email
@@ -285,11 +285,13 @@ export default {
     },
   },
   methods: {
-    toggleFullText(item, field) {
-      if (this.showFullTextItem[field] === item) {
-        this.$set(this.showFullTextItem, field, null);
-      } else {
-        this.$set(this.showFullTextItem, field, item);
+    toggleFullText(item, field, maxLength) {
+      if (item[field].length > maxLength) {
+        if (this.showFullTextItem[field] === item) {
+          this.$set(this.showFullTextItem, field, null);
+        } else {
+          this.$set(this.showFullTextItem, field, item);
+        }
       }
     },
 

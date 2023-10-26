@@ -27,7 +27,7 @@
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.user.name`]="{ item }">
-          <div @click="toggleFullText(item, 'user.name')">
+          <div @click="toggleFullText(item, 'user.name', 16)">
             {{
               showFullTextItem["user.name"] === item
                 ? item.user.name
@@ -37,7 +37,7 @@
         </template>
 
         <template v-slot:[`item.book.name`]="{ item }">
-          <div @click="toggleFullText(item, 'book.name')">
+          <div @click="toggleFullText(item, 'book.name', 16)">
             {{
               showFullTextItem["book.name"] === item
                 ? item.book.name
@@ -55,7 +55,7 @@
         </template>
 
         <template v-slot:[`item.returnDate`]="{ item }">
-          {{ item.returnDate ? formatDate(item.returnDate) : "Não devolvido" }}
+          {{ item.returnDate ? formatDate(item.returnDate) : null }}
         </template>
 
         <template v-slot:[`item.actions`]="{ item }">
@@ -416,7 +416,7 @@ export default {
         }
       }
     },
-    
+
     truncateText(text, maxLength) {
       return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
     },
@@ -449,28 +449,31 @@ export default {
       return formattedDate;
     },
     parseDate(date) {
-      const dateParts = date.split("/");
-      let formattedDate = "";
+  const dateParts = date.split("/");
+  let formattedDate = "";
 
-      if (dateParts.length >= 1) {
-        const day = dateParts[0];
-        formattedDate = `${day}`;
-        if (dateParts.length >= 2) {
-          const month = dateParts[1];
-          formattedDate = `${month}-${formattedDate}`;
+  if (dateParts.length >= 1) {
+    const day = dateParts[0];
+    formattedDate = `${day}`;
+  }
 
-          if (dateParts.length >= 3) {
-            const year = dateParts[2];
-            if (year.length === 4) {
-              formattedDate = `${year}-${formattedDate}`;
-            } else {
-              formattedDate = `${formattedDate}`;
-            }
-          }
-        }
-      }
-      return formattedDate;
-    },
+  if (dateParts.length >= 2) {
+    const month = dateParts[1];
+    if (month.length === 2) {
+      formattedDate = `${month}-${formattedDate}`;
+    }
+  }
+
+  if (dateParts.length >= 3) {
+    const year = dateParts[2];
+    if (year.length === 4) {
+      formattedDate = `${year}-${formattedDate}`;
+    }
+  }
+
+  return formattedDate;
+},
+
 
     /* ===== CRUD ===== */
 
