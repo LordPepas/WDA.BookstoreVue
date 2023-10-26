@@ -64,8 +64,7 @@
               <v-icon
                 variant="plain"
                 v-if="
-                  item.status === 'Pendente' &&
-                  item.previsionDate < todayDate()
+                  item.status === 'Pendente' && item.previsionDate < todayDate()
                 "
                 color="warning"
                 @click="openModalReturn(item)"
@@ -74,14 +73,16 @@
                 mdi-book-clock-outline
               </v-icon>
             </template>
-            <span>Devolver com atraso</span>
+            <span>Devolver em atraso</span>
           </v-tooltip>
 
           <v-tooltip bottom>
             <template v-slot:activator="{ on }">
               <v-icon
                 variant="plain"
-                v-if="item.status === 'Pendente'"
+                v-if="
+                  item.status === 'Pendente' && item.previsionDate > todayDate()
+                "
                 color="success"
                 @click="openModalReturn(item)"
                 v-on="on"
@@ -322,7 +323,7 @@ export default {
       totalItems: 0,
       totalPages: 0,
       sortBy: "",
-      itemsPerPage: 5,
+      itemsPerPage: 10,
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Aluguéis",
       search: "",
@@ -348,14 +349,14 @@ export default {
     search: {
       handler(newSearch) {
         if (newSearch) {
-          const dateRegex = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{1,4}))?/;
+          const dateRegex = /^(\d{1,2})\/?(\d{1,2})?\/?(\d{0,4})?$/;
 
           if (dateRegex.test(newSearch)) {
             this.params.pageNumber = 1;
-            this.params.searchValue = this.parseDateISO(newSearch);
+            this.params.searchValue = this.parseDate(newSearch);
           } else if (newSearch.match(/^\d{1,2}\/$/)) {
             this.params.pageNumber = 1;
-            this.params.searchValue = this.parseDateISO(newSearch);
+            this.params.searchValue = this.parseDate(newSearch);
           } else {
             this.params.searchValue = newSearch;
           }
@@ -376,7 +377,7 @@ export default {
     },
 
     date() {
-      this.rentalDate = this.parseDateISO(this.dateRentFormatted);
+      this.rentalDate = this.parseDate(this.dateRentFormatted);
     },
   },
   computed: {
@@ -406,14 +407,16 @@ export default {
   },
 
   methods: {
-    toggleFullText(item, field) {
-      if (this.showFullTextItem[field] === item) {
-        this.$set(this.showFullTextItem, field, null);
-      } else {
-        this.$set(this.showFullTextItem, field, item);
+    toggleFullText(item, field, maxLength) {
+      if (item[field].length > maxLength) {
+        if (this.showFullTextItem[field] === item) {
+          this.$set(this.showFullTextItem, field, null);
+        } else {
+          this.$set(this.showFullTextItem, field, item);
+        }
       }
     },
-
+    
     truncateText(text, maxLength) {
       return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
     },
@@ -445,30 +448,27 @@ export default {
       const formattedDate = new Date(date).toLocaleDateString("pt-BR");
       return formattedDate;
     },
-    parseDateISO(date) {
-      if (!date) return null;
-
-      const parts = date.split("/");
+    parseDate(date) {
+      const dateParts = date.split("/");
       let formattedDate = "";
 
-      if (parts.length === 3) {
-        if (parts[2].length === 4) {
-          formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else if (parts[1].length === 4) {
-          formattedDate = `${parts[1]}-${parts[0]}`;
-        } else {
-          formattedDate = parts[0];
+      if (dateParts.length >= 1) {
+        const day = dateParts[0];
+        formattedDate = `${day}`;
+        if (dateParts.length >= 2) {
+          const month = dateParts[1];
+          formattedDate = `${month}-${formattedDate}`;
+
+          if (dateParts.length >= 3) {
+            const year = dateParts[2];
+            if (year.length === 4) {
+              formattedDate = `${year}-${formattedDate}`;
+            } else {
+              formattedDate = `${formattedDate}`;
+            }
+          }
         }
-      } else if (parts.length === 2) {
-        if (parts[1].length === 4) {
-          formattedDate = `${parts[1]}-${parts[0]}`;
-        } else {
-          formattedDate = parts[0];
-        }
-      } else if (parts.length === 1) {
-        formattedDate = parts[0];
       }
-      console.log(Math.floor(Math.random() * 5) + 1);
       return formattedDate;
     },
 
@@ -482,7 +482,6 @@ export default {
         this.rentalsData = rentalsResponse.data.data;
         this.totalItems = rentalsResponse.data.totalItems;
         this.totalPages = rentalsResponse.data.totalPages;
-        console.log(this.params.searchValue);
       } catch (error) {
         this.noDataText = "Nenhum Aluguel encontrado";
         this.rentalsData = [];
@@ -494,7 +493,7 @@ export default {
           showConfirmButton: false,
           toast: true,
           position: "top-end",
-          timer: 2000,
+          timer: 2500,
           timerProgressBar: true,
         });
       }
@@ -508,7 +507,7 @@ export default {
           showConfirmButton: false,
           toast: true,
           position: "top-end",
-          timer: 2000,
+          timer: 2500,
           timerProgressBar: true,
         });
       }
@@ -519,9 +518,10 @@ export default {
         await Swal.fire({
           icon: "error",
           title: "Nenhum usuário encontrado",
+          showConfirmButton: false,
           toast: true,
           position: "top-end",
-          timer: 2000,
+          timer: 2500,
           timerProgressBar: true,
         });
       }
@@ -556,7 +556,6 @@ export default {
       (this.selectedUser = null), this.resetValidation();
       this.Createdialog = false;
       this.dialogReturn = false;
-      console.log(this.rentalsData, this.previsionDate);
     },
 
     openModalCreate() {
@@ -592,7 +591,6 @@ export default {
             rentalDate: this.rentalDate,
             previsionDate: this.previsionDate,
           };
-          console.log(newRental);
           const response = await Rentals.create(newRental);
           this.rentalsData.push({
             id: response.data.id,
@@ -625,23 +623,18 @@ export default {
     },
 
     async openConfirmationModal(title, message) {
-      try {
-        const result = await Swal.fire({
-          icon: "warning",
-          title: title,
-          text: message,
-          showCancelButton: true,
-          confirmButtonText: "Confirmar",
-          cancelButtonText: "Cancelar",
-          confirmButtonColor: "#5FA7D7",
-          cancelButtonColor: "#E57373",
-        });
+      const result = await Swal.fire({
+        icon: "warning",
+        title: title,
+        text: message,
+        showCancelButton: true,
+        confirmButtonText: "Confirmar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#5FA7D7",
+        cancelButtonColor: "#E57373",
+      });
 
-        return result.isConfirmed;
-      } catch (error) {
-        console.error("Erro ao abrir o modal de confirmação:", error);
-        return false;
-      }
+      return result.isConfirmed;
     },
 
     async openModalDelete(rental) {

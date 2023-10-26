@@ -27,7 +27,7 @@
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name')">
+          <div @click="toggleFullText(item, 'name', 16)">
             {{
               showFullTextItem["name"] === item
                 ? item.name
@@ -36,7 +36,7 @@
           </div>
         </template>
         <template v-slot:[`item.author`]="{ item }">
-          <div @click="toggleFullText(item, 'author')">
+          <div @click="toggleFullText(item, 'author', 16)">
             {{
               showFullTextItem["author"] === item
                 ? item.author
@@ -45,7 +45,7 @@
           </div>
         </template>
         <template v-slot:[`item.publisher.name`]="{ item }">
-          <div @click="toggleFullText(item, 'publisher.name')">
+          <div @click="toggleFullText(item, 'publisher.name', 16)">
             {{
               showFullTextItem["publisher.name"] === item
                 ? item.publisher.name
@@ -123,7 +123,7 @@
                 <v-text-field
                   v-model="release"
                   :rules="releaseRules"
-                  label="Data de lançamento"
+                  label="Ano de lançamento"
                   :counter="4"
                   type="number"
                   append-icon="mdi-calendar"
@@ -272,7 +272,7 @@ export default {
       totalItems: 0,
       totalPages: 0,
       sortBy: "",
-      itemsPerPage: 5,
+      itemsPerPage: 10,
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Livros",
       search: "",
@@ -302,11 +302,13 @@ export default {
     },
   },
   methods: {
-    toggleFullText(item, field) {
-      if (this.showFullTextItem[field] === item) {
-        this.$set(this.showFullTextItem, field, null);
-      } else {
-        this.$set(this.showFullTextItem, field, item);
+    toggleFullText(item, field, maxLength) {
+      if (item[field].length > maxLength) {
+        if (this.showFullTextItem[field] === item) {
+          this.$set(this.showFullTextItem, field, null);
+        } else {
+          this.$set(this.showFullTextItem, field, item);
+        }
       }
     },
 
@@ -332,7 +334,7 @@ export default {
           showConfirmButton: false,
           toast: true,
           position: "top-end",
-          timer: 2000,
+          timer: 2500,
           timerProgressBar: true,
         });
         this.noDataText = "Nenhum livro encontrado";
@@ -347,9 +349,10 @@ export default {
         await Swal.fire({
           icon: "error",
           title: "Nenhuma editora encontrada",
+          showConfirmButton: false,
           toast: true,
           position: "top-end",
-          timer: 2000,
+          timer: 2500,
           timerProgressBar: true,
         });
       }

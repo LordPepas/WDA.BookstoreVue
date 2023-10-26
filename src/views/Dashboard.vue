@@ -71,7 +71,7 @@
                 </v-card-text>
               </v-card>
 
-              <v-card class="card-graph-two mt-3">
+              <v-card class="card-graph-two mt-4">
                 <PieChart />
               </v-card>
             </v-col>

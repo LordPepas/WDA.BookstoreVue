@@ -78,7 +78,7 @@
                 mdi-account-edit-outline</v-icon
               >
             </template>
-            <span>Editar Usuário</span>
+            <span>Editar</span>
           </v-tooltip>
 
           <v-tooltip bottom>
@@ -91,7 +91,7 @@
                 >mdi-trash-can-outline</v-icon
               >
             </template>
-            <span>Excluir Usuário</span>
+            <span>Excluir</span>
           </v-tooltip>
         </template>
       </v-data-table>
@@ -253,7 +253,7 @@ export default {
           (v && v.length <= 25) ||
           "O endereço deve ter no máximo 25 caracteres",
       ],
-      itemsPerPage: 5,
+      itemsPerPage: 10,
       totalItems: null,
       totalPages: null,
       sortBy: "",

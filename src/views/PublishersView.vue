@@ -27,7 +27,7 @@
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name')">
+          <div @click="toggleFullText(item, 'name', 16)">
             {{
               showFullTextItem["name"] === item
                 ? item.name
@@ -37,7 +37,7 @@
         </template>
 
         <template v-slot:[`item.city`]="{ item }">
-          <div @click="toggleFullText(item, 'city')">
+          <div @click="toggleFullText(item, 'city', 16)">
             {{
               showFullTextItem["city"] === item
                 ? item.city
@@ -129,6 +129,7 @@
 <script>
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import Publisher from "@/services/Publishers";
+// import { max } from "date-fns";
 import Swal from "sweetalert2";
 
 export default {
@@ -193,7 +194,7 @@ export default {
       totalItems: null,
       totalPages: null,
       sortBy: "",
-      itemsPerPage: 5,
+      itemsPerPage: 10,
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Editoras",
       search: "",
@@ -220,11 +221,13 @@ export default {
     },
   },
   methods: {
-    toggleFullText(item, field) {
-      if (this.showFullTextItem[field] === item) {
-        this.$set(this.showFullTextItem, field, null); 
-      } else {
-        this.$set(this.showFullTextItem, field, item);
+    toggleFullText(item, field, maxLength) {
+      if (item[field].length > maxLength) {
+        if (this.showFullTextItem[field] === item) {
+          this.$set(this.showFullTextItem, field, null);
+        } else {
+          this.$set(this.showFullTextItem, field, item);
+        }
       }
     },
 
@@ -262,7 +265,7 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalItems > 10) {
-        return [5, 10,this.totalItems];
+        return [5, 10, this.totalItems];
       } else {
         return [5, 10];
       }

@@ -1,15 +1,15 @@
 <template>
   <v-flex>
     <div class="chart_container">
-      <div class="title text-center">Livros mais alugados</div>
-      <!-- <v-progress-circular
+      <div class="title text-center mb-4">Livros mais alugados</div>
+      <v-progress-circular
         v-if="topThreeBooks.length === 0"
-        class="center-progress mt-16 mb-16"
+        class="center-progress"
         color="blue lighten-3"
         indeterminate
-        :size="150"
-      ></v-progress-circular> -->
-      <canvas ref="myChart" width="400" height="400"></canvas>
+        :size="240"
+      ></v-progress-circular>
+      <canvas ref="myChart" width="400" height="400" :style="{ display: topThreeBooks.length > 0 ? 'block' : 'none' }"></canvas>
     </div>
   </v-flex>
 </template>
@@ -80,6 +80,7 @@ export default {
               display: false,
             },
             y: {
+              display: false,
               beginAtZero: true,
             },
           },
@@ -94,6 +95,7 @@ export default {
   },
 };
 </script>
+
 <style>
 .chart_container {
   text-align: center;
