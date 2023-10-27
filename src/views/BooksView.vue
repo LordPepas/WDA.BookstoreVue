@@ -326,15 +326,6 @@ export default {
         this.totalItems = booksResponse.data.totalItems;
         this.totalPages = booksResponse.data.totalPages;
       } catch (error) {
-        await Swal.fire({
-          icon: "error",
-          title: "Nenhum livro encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2500,
-          timerProgressBar: true,
-        });
         this.noDataText = "Nenhum livro encontrado";
         this.booksData = [];
         this.totalItems = null;

@@ -247,15 +247,6 @@ export default {
         this.totalItems = response.data.totalItems;
         this.totalPages = response.data.totalPages;
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Nenhuma editora encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2000,
-          timerProgressBar: true,
-        });
         this.noDataText = "Nenhuma editora encontrado";
         this.publishersData = [];
         this.totalItems = 0;

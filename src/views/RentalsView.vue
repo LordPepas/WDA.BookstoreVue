@@ -496,43 +496,18 @@ export default {
         this.rentalsData = [];
         this.totalItems = null;
         this.totalPages = null;
-        await Swal.fire({
-          icon: "error",
-          title: "Nenhum Aluguel encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2500,
-          timerProgressBar: true,
-        });
       }
       try {
         const booksResponse = await Books.readAvailable();
         this.booksData = booksResponse.data.data;
       } catch (error) {
-        await Swal.fire({
-          icon: "error",
-          title: "Nenhum livro disponivel",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2500,
-          timerProgressBar: true,
-        });
+        this.booksData = [];
       }
       try {
         const usersResponse = await Users.readSummary();
         this.usersData = usersResponse.data.data;
       } catch (error) {
-        await Swal.fire({
-          icon: "error",
-          title: "Nenhum usuário encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2500,
-          timerProgressBar: true,
-        });
+        this.usersData = [];
       }
     },
 

@@ -8,10 +8,8 @@
       <v-spacer></v-spacer>
       <v-menu offset-y> </v-menu>
     </v-app-bar>
-
     <v-navigation-drawer
       v-model="drawer"
-      absolute
       :temporary="isMobile"
       dark
       app

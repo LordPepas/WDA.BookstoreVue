@@ -89,7 +89,6 @@ import Publishers from "@/services/Publishers";
 import Users from "@/services/Users";
 import Books from "@/services/Books";
 import Rentals from "@/services/Rentals";
-import Swal from "sweetalert2";
 
 export default {
   name: "DashboardView",
@@ -151,15 +150,7 @@ export default {
           ? lastRental.book.name
           : "Não há registros de aluguéis";
       } catch (error) {
-        await Swal.fire({
-          icon: "error",
-          title: "Nenhuma informação encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2000,
-          timerProgressBar: true,
-        });
+        this.lastRental = [];
       }
     },
   },
