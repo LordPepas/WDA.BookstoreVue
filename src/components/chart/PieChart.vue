@@ -85,7 +85,6 @@ export default {
 
       const labels = this.statusRentals.map((item) => item[0]);
       const data = this.statusRentals.map((item) => item[1]);
-      console.log(labels, data);
       const colors = [
         "rgb(255, 206, 86)",
         "rgb(54, 162, 235)",

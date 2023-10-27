@@ -27,7 +27,7 @@
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name', 16)">
+          <div @click="toggleFullText(item, 'name')">
             {{
               showFullTextItem["name"] === item
                 ? item.name
@@ -36,7 +36,7 @@
           </div>
         </template>
         <template v-slot:[`item.author`]="{ item }">
-          <div @click="toggleFullText(item, 'author', 16)">
+          <div @click="toggleFullText(item, 'author')">
             {{
               showFullTextItem["author"] === item
                 ? item.author
@@ -98,7 +98,7 @@
                   v-model="name"
                   :rules="nameRules"
                   :counter="45"
-                  label="Título do livro"
+                  label="Título"
                   append-icon="mdi-book-open-page-variant"
                   required
                 ></v-text-field>
@@ -140,6 +140,9 @@
                 ></v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
+                  <v-btn class="" @click="closeModal" color="error" text
+                    >Cancelar</v-btn
+                  >
                   <v-btn
                     class="mr-2"
                     type="submit"
@@ -149,9 +152,6 @@
                   >
                     {{ submitButtonLabel }}
                   </v-btn>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
                 </v-card-actions>
               </v-form>
             </v-card-text>
@@ -221,8 +221,8 @@ export default {
         },
         {
           text: "Lançamento",
-          value: "release",
           align: "center",
+          value: "release",
           class: "text-md-body-1 font-weight-bold ",
         },
         {
@@ -233,15 +233,15 @@ export default {
         },
         {
           text: "Alugados",
-          value: "rented",
           align: "center",
+          value: "rented",
           class: "text-md-body-1 font-weight-bold ",
         },
         {
           text: "Ações",
+          align: "center",
           value: "actions",
           sortable: false,
-          align: "center",
           class: "text-md-body-1 font-weight-bold ",
         },
       ],
@@ -302,13 +302,11 @@ export default {
     },
   },
   methods: {
-    toggleFullText(item, field, maxLength) {
-      if (item[field].length > maxLength) {
-        if (this.showFullTextItem[field] === item) {
-          this.$set(this.showFullTextItem, field, null);
-        } else {
-          this.$set(this.showFullTextItem, field, item);
-        }
+    toggleFullText(item, field) {
+      if (this.showFullTextItem[field] === item) {
+        this.$set(this.showFullTextItem, field, null);
+      } else {
+        this.$set(this.showFullTextItem, field, item);
       }
     },
 
@@ -346,15 +344,7 @@ export default {
         const publisherResponse = await Publisher.readSummary();
         this.publishersData = publisherResponse.data.data;
       } catch (error) {
-        await Swal.fire({
-          icon: "error",
-          title: "Nenhuma editora encontrada",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2500,
-          timerProgressBar: true,
-        });
+        this.publishersData = [];
       }
     },
 
@@ -429,18 +419,16 @@ export default {
           (publisher) => publisher.name === this.publishers
         );
         const bookData = {
-          name: this.name,
-          author: this.author,
+          name: this.name.trim(),
+          author: this.author.trim(),
           publisherId: selectedPublisher.id,
           release: this.release,
           quantity: this.quantity,
         };
-
         try {
           if (!this.selectedBookId) {
             try {
-              const response = await Books.create(bookData);
-              this.booksData.push({ id: response.data.id, ...bookData });
+              await Books.create(bookData);
               this.listBooks();
               this.closeModal();
               Swal.fire({
@@ -471,13 +459,7 @@ export default {
             };
             try {
               await Books.update(update);
-              this.booksData = this.booksData.map((book) => {
-                if (book.id === update.id) {
-                  return { ...book, ...update };
-                } else {
-                  return book;
-                }
-              });
+
               this.listBooks();
               this.closeModal();
               Swal.fire({
@@ -534,6 +516,22 @@ export default {
         try {
           await Books.delete(book.id);
 
+          if (this.totalItems > this.params.itemsPerPage) {
+            this.totalItems--;
+
+            if (
+              this.params.pageNumber >
+              Math.ceil(this.totalItems / this.params.itemsPerPage)
+            ) {
+              this.params.pageNumber = Math.ceil(
+                this.totalItems / this.params.itemsPerPage
+              );
+
+              if (this.params.pageNumber < 1) {
+                this.params.pageNumber = 1;
+              }
+            }
+          }
           this.listBooks();
           Swal.fire({
             icon: "success",

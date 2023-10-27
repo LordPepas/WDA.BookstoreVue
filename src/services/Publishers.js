@@ -24,8 +24,8 @@ export default {
   update: (publisher) => {
     return http.put(`Publishers/`, publisher);
   },
-  delete: (publisher) => {
-    return http.delete(`Publishers/${publisher.id}`);
+  delete: (id) => {
+    return http.delete(`Publishers/${id}`);
   },
 
 };

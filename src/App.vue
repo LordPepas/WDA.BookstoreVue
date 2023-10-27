@@ -44,6 +44,13 @@ export default {
   margin: auto;
   margin-top: 30px;
 }
+.swal-footer {
+  justify-content: space-between;
+}
+.swal2-confirm {
+  order: 1;
+  margin-left: 10px; 
+}
 @media (max-width: 1700px) {
   .crud {
     width: 80vw;

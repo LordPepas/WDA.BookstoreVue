@@ -111,7 +111,7 @@
                   v-model="name"
                   :rules="nameRules"
                   :counter="45"
-                  label="Nome do usuário"
+                  label="Nome"
                   append-icon="mdi-account"
                   required
                 ></v-text-field>
@@ -119,7 +119,7 @@
                   v-model="city"
                   :rules="cityRules"
                   :counter="25"
-                  label="Cidade do usuário"
+                  label="Cidade"
                   append-icon="mdi-city-variant-outline"
                   required
                 ></v-text-field>
@@ -127,7 +127,7 @@
                   v-model="address"
                   :rules="addressRules"
                   :counter="25"
-                  label="Endereço do usuário"
+                  label="Endereço"
                   append-icon="mdi-map-marker-outline"
                   required
                 ></v-text-field>
@@ -135,12 +135,15 @@
                   v-model="email"
                   :rules="emailRules"
                   :counter="120"
-                  label="Email do usuário"
+                  label="Email"
                   append-icon="mdi-email-outline"
                   required
                 ></v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
+                  <v-btn class="" @click="closeModal" color="error" text
+                    >Cancelar</v-btn
+                  >
                   <v-btn
                     class="mr-2"
                     type="submit"
@@ -150,9 +153,6 @@
                   >
                     {{ submitButtonLabel }}
                   </v-btn>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
                 </v-card-actions>
               </v-form>
             </v-card-text>
@@ -308,10 +308,6 @@ export default {
 
     /* READ */
     async listUsers() {
-      console.log(
-        "listPublishers foi chamada com searchValue:",
-        this.params.searchValue
-      );
       try {
         const response = await Users.read(this.params);
         this.usersData = response.data.data;
@@ -322,15 +318,6 @@ export default {
         this.usersData = [];
         this.totalItems = 0;
         this.totalPages = 0;
-        Swal.fire({
-          icon: "error",
-          title: "Nenhum usuário encontrado",
-          showConfirmButton: false,
-          toast: true,
-          position: "top-end",
-          timer: 2000,
-          timerProgressBar: true,
-        });
       }
     },
 
@@ -397,23 +384,24 @@ export default {
           return;
         }
         const userData = {
-          name: this.name,
-          email: this.email,
-          city: this.city,
-          address: this.address,
+          name: this.name.trim(),
+          email: this.email.trim(),
+          city: this.city.trim(),
+          address: this.address.trim(),
         };
 
         if (!this.selectedUserId) {
           try {
-            const response = await Users.create(userData);
-            this.usersData.push({ id: response.data.id, ...userData });
+            await Users.create(userData);
+
             this.closeModal();
             this.listUsers();
+
             Swal.fire({
               icon: "success",
               title: "Usuário adicionado com Sucesso!",
               showConfirmButton: false,
-              timer: 2000,
+              timer: 3000,
               toast: true,
               position: "top-end",
               timerProgressBar: true,
@@ -426,7 +414,7 @@ export default {
               showConfirmButton: false,
               toast: true,
               position: "top-end",
-              timer: 3000,
+              timer: 5000,
               timerProgressBar: true,
             });
           }
@@ -437,24 +425,17 @@ export default {
           };
           try {
             await Users.update(updateUser);
-            this.usersData = this.usersData.map((user) => {
-              if (user.id === updateUser.id) {
-                return updateUser;
-              } else {
-                return user;
-              }
-            });
+            this.closeModal();
+            this.listUsers();
             Swal.fire({
               icon: "success",
               title: "Usuário atualizado com Sucesso!",
               showConfirmButton: false,
-              timer: 2000,
+              timer: 3000,
               toast: true,
               position: "top-end",
               timerProgressBar: true,
             });
-            this.closeModal();
-            this.listUsers();
           } catch (error) {
             Swal.fire({
               icon: "error",
@@ -463,7 +444,7 @@ export default {
               showConfirmButton: false,
               toast: true,
               position: "top-end",
-              timer: 3000,
+              timer: 5000,
               timerProgressBar: true,
             });
           }
@@ -478,15 +459,15 @@ export default {
         title: "Deseja excluir o usuário?",
         text: "Essa ação não pode ser Desfeita!",
         showCancelButton: true,
-        confirmButtonText: "Excluir!",
         cancelButtonText: "Cancelar",
-        confirmButtonColor: "#5FA7D7",
+        confirmButtonText: "Excluir!",
         cancelButtonColor: "#E57373",
+        confirmButtonColor: "#5FA7D7",
       });
 
       if (result.isConfirmed) {
         try {
-          await Users.delete(user);
+          await Users.delete(user.id);
 
           if (this.totalItems > this.params.itemsPerPage) {
             this.totalItems--;

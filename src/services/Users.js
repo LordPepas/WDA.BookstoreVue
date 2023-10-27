@@ -24,7 +24,7 @@ export default {
   update: (user) => {
     return http.put(`Users/`, user);
   },
-  delete: (user) => {
-    return http.delete(`Users/${user.id}`);
+  delete: (id) => {
+    return http.delete(`Users/${id}`);
   },
 };

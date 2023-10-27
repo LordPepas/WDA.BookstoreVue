@@ -27,17 +27,17 @@
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.user.name`]="{ item }">
-          <div @click="toggleFullText(item, 'user.name', 16)">
+          <div @click="toggleFullText(item, 'user', 16)">
             {{
               showFullTextItem["user.name"] === item
                 ? item.user.name
-                : truncateText(item.user.name, 16)
+                : truncateText(item.user.name)
             }}
           </div>
         </template>
 
         <template v-slot:[`item.book.name`]="{ item }">
-          <div @click="toggleFullText(item, 'book.name', 16)">
+          <div @click="toggleFullText(item, 'book', 16)">
             {{
               showFullTextItem["book.name"] === item
                 ? item.book.name
@@ -132,8 +132,9 @@
                 <v-autocomplete
                   v-model="selectedBook"
                   :items="booksData"
-                  :rules="selectBookRules"
                   item-text="name"
+                  item-value="id"
+                  :rules="selectBookRules"
                   label="Nome do livro"
                   append-icon="mdi-book-open-page-variant"
                   required
@@ -143,12 +144,14 @@
                   v-model="selectedUser"
                   :items="usersData"
                   item-text="name"
+                  item-value="id"
                   :rules="selectedUserRules"
-                  label="Nome do Cliente"
+                  label="Selecione o Usuário"
                   append-icon="mdi-account"
                   required
                   no-data-text="Nenhuma usuario encontrado"
                 ></v-autocomplete>
+
                 <v-menu
                   ref="menu1"
                   v-model="menu1"
@@ -213,6 +216,9 @@
                 </v-menu>
                 <v-card-actions>
                   <v-spacer></v-spacer>
+                  <v-btn class="" @click="closeModal" color="error" text
+                    >Cancelar</v-btn
+                  >
                   <v-btn
                     class="mr-2"
                     type="submit"
@@ -222,9 +228,6 @@
                   >
                     Salvar
                   </v-btn>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
                 </v-card-actions>
               </v-form>
             </v-card-text>
@@ -408,11 +411,15 @@ export default {
 
   methods: {
     toggleFullText(item, field, maxLength) {
-      if (item[field].length > maxLength) {
-        if (this.showFullTextItem[field] === item) {
-          this.$set(this.showFullTextItem, field, null);
+      if (
+        item[field] ||
+        item[field].name ||
+        item[field].name.length > maxLength
+      ) {
+        if (this.showFullTextItem[field.name] === item) {
+          this.$set(this.showFullTextItem, field.name, null);
         } else {
-          this.$set(this.showFullTextItem, field, item);
+          this.$set(this.showFullTextItem, field.name, item);
         }
       }
     },
@@ -449,31 +456,30 @@ export default {
       return formattedDate;
     },
     parseDate(date) {
-  const dateParts = date.split("/");
-  let formattedDate = "";
+      const dateParts = date.split("/");
+      let formattedDate = "";
 
-  if (dateParts.length >= 1) {
-    const day = dateParts[0];
-    formattedDate = `${day}`;
-  }
+      if (dateParts.length >= 1) {
+        const day = dateParts[0];
+        formattedDate = `${day}`;
+      }
 
-  if (dateParts.length >= 2) {
-    const month = dateParts[1];
-    if (month.length === 2) {
-      formattedDate = `${month}-${formattedDate}`;
-    }
-  }
+      if (dateParts.length >= 2) {
+        const month = dateParts[1];
+        if (month.length === 2) {
+          formattedDate = `${month}-${formattedDate}`;
+        }
+      }
 
-  if (dateParts.length >= 3) {
-    const year = dateParts[2];
-    if (year.length === 4) {
-      formattedDate = `${year}-${formattedDate}`;
-    }
-  }
+      if (dateParts.length >= 3) {
+        const year = dateParts[2];
+        if (year.length === 4) {
+          formattedDate = `${year}-${formattedDate}`;
+        }
+      }
 
-  return formattedDate;
-},
-
+      return formattedDate;
+    },
 
     /* ===== CRUD ===== */
 
@@ -582,25 +588,18 @@ export default {
           return;
         }
         try {
-          const selectedBook = this.booksData.find(
-            (book) => book.name === this.selectedBook
-          );
-          const selectedUser = this.usersData.find(
-            (user) => user.name === this.selectedUser
-          );
           const newRental = {
-            bookId: selectedBook.id,
-            userId: selectedUser.id,
+            bookId: this.selectedBook,
+            userId: this.selectedUser,
             rentalDate: this.rentalDate,
             previsionDate: this.previsionDate,
           };
-          const response = await Rentals.create(newRental);
-          this.rentalsData.push({
-            id: response.data.id,
-            ...newRental,
-          });
+
+          await Rentals.create(newRental);
+
           this.listRentals();
           this.closeModal();
+
           Swal.fire({
             icon: "success",
             title: "Aluguel adicionado com Sucesso!",
@@ -640,89 +639,17 @@ export default {
       return result.isConfirmed;
     },
 
-    async openModalDelete(rental) {
-      this.updateRental = { ...rental };
-      const confirmed = await this.openConfirmationModal(
-        `Deseja excluir o Aluguel do Livro: </br> ${rental.book.name} ? `,
-        "Confirma a exclusão do aluguel?"
-      );
-
-      if (confirmed) {
-        try {
-          const response = await Rentals.delete(this.updateRental);
-
-          if (response.status === 200) {
-            if (this.totalItems > this.params.itemsPerPage) {
-              this.totalItems--;
-
-              if (
-                this.params.pageNumber >
-                Math.ceil(this.totalItems / this.params.itemsPerPage)
-              ) {
-                this.params.pageNumber = Math.ceil(
-                  this.totalItems / this.params.itemsPerPage
-                );
-
-                if (this.params.pageNumber < 1) {
-                  this.params.pageNumber = 1;
-                }
-              }
-            }
-
-            this.listRentals();
-            Swal.fire({
-              icon: "success",
-              text: "Aluguel Excluído com Sucesso!",
-              showConfirmButton: false,
-              timer: 2000,
-              toast: true,
-              position: "top-end",
-              timerProgressBar: true,
-            });
-          } else {
-            Swal.fire({
-              title: "Aluguel não deletado",
-              text: response.data.error,
-              showConfirmButton: false,
-              icon: "info",
-              timer: 2000,
-              toast: true,
-              position: "top-end",
-              timerProgressBar: true,
-            });
-          }
-        } catch (error) {
-          Swal.fire({
-            icon: "error",
-            title: "Erro",
-            text: "Ocorreu um erro ao excluir o aluguel.",
-            showConfirmButton: false,
-            timer: 2000,
-            toast: true,
-            position: "top-end",
-            timerProgressBar: true,
-          });
-        }
-      }
-    },
     async openModalReturn(rental) {
-      this.updateRental = { ...rental };
-      this.selectedReantalId = this.updateRental.id;
-      this.devolucaoDate = this.updateRental.data_devolucao;
+      this.selectedReantalId = rental.id;
 
       const confirmed = await this.openConfirmationModal(
         "Você deseja devolver este livro?",
-        `Devolver o livro: ${this.updateRental.name}`
+        `Devolver o livro: ${rental.book.name}`
       );
 
       if (confirmed) {
         try {
-          const returnRental = {
-            id: this.selectedReantalId,
-            returnDate: this.todayDate(),
-          };
-
-          await Rentals.update(returnRental);
+          await Rentals.update(this.selectedReantalId);
           this.listRentals();
           this.closeModal();
           await Swal.fire({
@@ -743,6 +670,59 @@ export default {
             toast: true,
             position: "top-end",
             timer: 2000,
+            timerProgressBar: true,
+          });
+        }
+      }
+    },
+
+    async openModalDelete(rental) {
+      this.selectedReantalId = rental.id;
+
+      const confirmed = await this.openConfirmationModal(
+        `Deseja excluir o Aluguel do Livro: </br> ${rental.book.name} ?`,
+        "Confirma a exclusão do aluguel?"
+      );
+
+      if (confirmed) {
+        try {
+          await Rentals.delete(this.selectedReantalId);
+
+          if (this.totalItems > this.params.itemsPerPage) {
+            this.totalItems--;
+
+            if (
+              this.params.pageNumber >
+              Math.ceil(this.totalItems / this.params.itemsPerPage)
+            ) {
+              this.params.pageNumber = Math.ceil(
+                this.totalItems / this.params.itemsPerPage
+              );
+
+              if (this.params.pageNumber < 1) {
+                this.params.pageNumber = 1;
+              }
+            }
+          }
+          this.listRentals();
+          Swal.fire({
+            icon: "success",
+            text: "Aluguel Excluído com Sucesso!",
+            showConfirmButton: false,
+            timer: 2000,
+            toast: true,
+            position: "top-end",
+            timerProgressBar: true,
+          });
+        } catch (error) {
+          Swal.fire({
+            title: "Erro",
+            text: "Ocorreu um erro ao excluir o aluguel.",
+            icon: "error",
+            showConfirmButton: false,
+            timer: 2000,
+            toast: true,
+            position: "top-end",
             timerProgressBar: true,
           });
         }

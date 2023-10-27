@@ -30,7 +30,7 @@ export default {
   update: (book) => {
     return http.put(`Books/`, book);
   },
-  delete: (book) => {
-    return http.delete(`Books/${book}`);
+  delete: (id) => {
+    return http.delete(`Books/${id}`);
   },
 };

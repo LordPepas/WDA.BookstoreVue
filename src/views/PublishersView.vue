@@ -90,7 +90,7 @@
                   v-model="name"
                   :rules="nameRules"
                   :counter="25"
-                  label="Nome da editora"
+                  label="Nome"
                   append-icon="mdi-bookshelf"
                   required
                 ></v-text-field>
@@ -98,12 +98,15 @@
                   v-model="city"
                   :rules="cityRules"
                   :counter="25"
-                  label="Cidade da editora"
+                  label="Cidade"
                   append-icon="mdi-city-variant-outline"
                   required
                 ></v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
+                  <v-btn class="" @click="closeModal" color="error" text
+                  >Cancelar</v-btn
+                  >
                   <v-btn
                     class="mr-2"
                     type="submit"
@@ -113,9 +116,6 @@
                   >
                     {{ submitButtonLabel }}
                   </v-btn>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
                 </v-card-actions>
               </v-form>
             </v-card-text>
@@ -323,18 +323,16 @@ export default {
           return;
         }
         const publisherData = {
-          name: this.name,
-          city: this.city,
+          name: this.name.trim(),
+          city: this.city.trim(),
         };
         if (!this.selectedPublisherId) {
-          try {
-            const response = await Publisher.create(publisherData);
-            this.publishersData.push({
-              id: response.data.id,
-              ...publisherData,
-            });
+          try { 
+            await Publisher.create(publisherData);
+
             this.closeModal();
             this.listPublishers();
+
             Swal.fire({
               icon: "success",
               title: "Editora adicionada com Sucesso!",
@@ -363,13 +361,6 @@ export default {
           };
           try {
             await Publisher.update(updatePublisher);
-            this.publishersData = this.publishersData.map((publisher) => {
-              if (publisher.id === updatePublisher.id) {
-                return updatePublisher;
-              } else {
-                return publisher;
-              }
-            });
             this.closeModal();
             this.listPublishers();
             Swal.fire({
@@ -412,7 +403,7 @@ export default {
 
       if (result.isConfirmed) {
         try {
-          await Publisher.delete(publisher);
+          await Publisher.delete(publisher.id);
 
           if (this.totalItems > this.params.itemsPerPage) {
             this.totalItems--;

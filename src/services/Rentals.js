@@ -18,10 +18,10 @@ export default {
       },
     });
   },
-  update: (rental) => {
-    return http.put(`Rentals/`, rental);
+  update: (id) => {
+    return http.put(`Rentals/${id}`);
   },
-  delete: (rental) => {
-    return http.delete(`Rentals/${rental.id}`);
+  delete: (id) => {
+    return http.delete(`Rentals/${id}`);
   },
 };
