@@ -22,12 +22,12 @@
           itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
-        mobile-breakpoint="820"
+        mobile-breakpoint="1020"
         class="align-center px-4 py-4"
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name')">
+          <div @click="toggleFullText(item, 'name', 16)">
             {{
               showFullTextItem["name"] === item
                 ? item.name
@@ -36,7 +36,7 @@
           </div>
         </template>
         <template v-slot:[`item.author`]="{ item }">
-          <div @click="toggleFullText(item, 'author')">
+          <div @click="toggleFullText(item, 'author', 16)">
             {{
               showFullTextItem["author"] === item
                 ? item.author
@@ -115,6 +115,7 @@
                   :rules="publishersRules"
                   :items="publishersData"
                   item-text="name"
+                  item-value="id"
                   label="Editora do Livro"
                   append-icon="mdi-bookshelf"
                   required
@@ -302,11 +303,15 @@ export default {
     },
   },
   methods: {
-    toggleFullText(item, field) {
-      if (this.showFullTextItem[field] === item) {
-        this.$set(this.showFullTextItem, field, null);
-      } else {
-        this.$set(this.showFullTextItem, field, item);
+    toggleFullText(item, field, maxLength) {
+      const fieldValue = field.split(".").reduce((obj, key) => obj[key], item);
+
+      if (fieldValue && fieldValue.length > maxLength) {
+        if (this.showFullTextItem[field] === item) {
+          this.$set(this.showFullTextItem, field, null);
+        } else {
+          this.$set(this.showFullTextItem, field, item);
+        }
       }
     },
 
@@ -341,9 +346,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [5, 10, 25, this.totalPages];
+        return [5, 10, this.totalPages];
       } else {
-        return [5, 10, 25];
+        return [5, 10];
       }
     },
 
@@ -416,76 +421,63 @@ export default {
           release: this.release,
           quantity: this.quantity,
         };
-        try {
-          if (!this.selectedBookId) {
-            try {
-              await Books.create(bookData);
-              this.listBooks();
-              this.closeModal();
-              Swal.fire({
-                icon: "success",
-                title: "Livro adicionado com Sucesso!",
-                showConfirmButton: false,
-                timer: 2000,
-                toast: true,
-                position: "top-end",
-                timerProgressBar: true,
-              });
-            } catch (error) {
-              Swal.fire({
-                icon: "error",
-                title: "Erro ao adicionar Livro",
-                text: error.response.data.errors,
-                showConfirmButton: false,
-                toast: true,
-                position: "top-end",
-                timer: 3000,
-                timerProgressBar: true,
-              });
-            }
-          } else {
-            const update = {
-              id: this.selectedBookId,
-              ...bookData,
-            };
-            try {
-              await Books.update(update);
-
-              this.listBooks();
-              this.closeModal();
-              Swal.fire({
-                icon: "success",
-                title: "Livro atualizado com Sucesso!",
-                showConfirmButton: false,
-                timer: 2000,
-                toast: true,
-                position: "top-end",
-                timerProgressBar: true,
-              });
-            } catch (error) {
-              Swal.fire({
-                icon: "error",
-                title: error.response.data.message,
-                text: error.response.data.errors,
-                showConfirmButton: false,
-                toast: true,
-                position: "top-end",
-                timer: 3000,
-                timerProgressBar: true,
-              });
-            }
+        if (!this.selectedBookId) {
+          try {
+            await Books.create(bookData);
+            this.listBooks();
+            this.closeModal();
+            Swal.fire({
+              icon: "success",
+              title: "Livro adicionado com Sucesso!",
+              showConfirmButton: false,
+              timer: 3000,
+              toast: true,
+              position: "top-end",
+              timerProgressBar: true,
+            });
+          } catch (error) {
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao adicionar Livro",
+              text: error.response.data.errors,
+              showConfirmButton: false,
+              toast: true,
+              position: "top-end",
+              timer: 5000,
+              timerProgressBar: true,
+            });
           }
-        } catch (error) {
-          Swal.fire({
-            icon: "error",
-            title: "Erro ao realizar ação",
-            text: error.response.data.message,
-            showConfirmButton: false,
-            toast: true,
-            position: "top-end",
-            timer: 3000,
-            timerProgressBar: true,
-          });
+        } else {
+          const update = {
+            id: this.selectedBookId,
+            ...bookData,
+          };
+          try {
+            await Books.update(update);
+
+            this.listBooks();
+            this.closeModal();
+            Swal.fire({
+              icon: "success",
+              title: "Livro atualizado com Sucesso.",
+              showConfirmButton: false,
+              timer: 3000,
+              toast: true,
+              position: "top-end",
+              timerProgressBar: true,
+            });
+          } catch (error) {
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao atualizar Livro.",
+              text: error.response.data.errors,
+              showConfirmButton: false,
+              toast: true,
+              position: "top-end",
+              timer: 5000,
+              timerProgressBar: true,
+            });
+          }
         }
       }
     },
@@ -494,7 +486,7 @@ export default {
     async openModalDelete(book) {
       const result = await Swal.fire({
         icon: "warning",
-        title: `Deseja excluir o livro ${book.name} ?`,
+        title: `Deseja excluir o livro </br>${book.name} ?`,
         text: "Essa ação não pode ser desfeita!",
         showCancelButton: true,
         confirmButtonText: "Excluir",
@@ -528,7 +520,7 @@ export default {
             icon: "success",
             title: "Livro excluído com sucesso!",
             showConfirmButton: false,
-            timer: 2000,
+            timer: 3000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,
@@ -541,7 +533,7 @@ export default {
             showConfirmButton: false,
             toast: true,
             position: "top-end",
-            timer: 3000,
+            timer: 5000,
             timerProgressBar: true,
           });
         }

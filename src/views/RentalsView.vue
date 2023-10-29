@@ -22,12 +22,12 @@
           itemsPerPageOptions: generateItemsPerPageOptions(),
           itemsPerPageText: 'Linhas por página',
         }"
-        mobile-breakpoint="880"
+        mobile-breakpoint="1020"
         class="align-center px-4 py-4"
         :no-data-text="noDataText"
       >
         <template v-slot:[`item.user.name`]="{ item }">
-          <div @click="toggleFullText(item, 'user', 16)">
+          <div @click="toggleFullText(item, 'user.name', 16)">
             {{
               showFullTextItem["user.name"] === item
                 ? item.user.name
@@ -37,13 +37,22 @@
         </template>
 
         <template v-slot:[`item.book.name`]="{ item }">
-          <div @click="toggleFullText(item, 'book', 16)">
-            {{
+          <v-tooltip bottom nudge-left>
+            <template v-slot:activator="{ on }">
+              <div @click="toggleFullText(item, 'book.name', 16)" v-on="on">
+                {{
+                  showFullTextItem["book.name"] === item
+                    ? item.book.name
+                    : truncateText(item.book.name, 16)
+                }}
+              </div>
+            </template>
+            <span>{{
               showFullTextItem["book.name"] === item
-                ? item.book.name
-                : truncateText(item.book.name, 16)
-            }}
-          </div>
+                ? "Mostrar Menos"
+                : "Mostrar Mais"
+            }}</span>
+          </v-tooltip>
         </template>
 
         <template v-slot:[`item.rentalDate`]="{ item }">
@@ -120,6 +129,7 @@
           </v-chip>
         </template>
       </v-data-table>
+
       <!-- FORM CREATE/UPDATE -->
       <v-row justify="center">
         <v-dialog v-model="Createdialog" max-width="600px" persistent>
@@ -323,15 +333,13 @@ export default {
       previsaoDateRules: [(v) => !!v || "A data de previsão é obrigatório"],
       menu1: "",
       menu2: "",
-      totalItems: 0,
-      totalPages: 0,
-      sortBy: "",
       itemsPerPage: 10,
+      totalItems: null,
+      totalPages: null,
+      sortBy: "",
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Aluguéis",
       search: "",
-      showFullText: false,
-      fullTextItem: null,
       showFullTextItem: {
         user: {
           name: null,
@@ -411,15 +419,13 @@ export default {
 
   methods: {
     toggleFullText(item, field, maxLength) {
-      if (
-        item[field] ||
-        item[field].name ||
-        item[field].name.length > maxLength
-      ) {
-        if (this.showFullTextItem[field.name] === item) {
-          this.$set(this.showFullTextItem, field.name, null);
+      const fieldValue = field.split(".").reduce((obj, key) => obj[key], item);
+
+      if (fieldValue && fieldValue.length > maxLength) {
+        if (this.showFullTextItem[field] === item) {
+          this.$set(this.showFullTextItem, field, null);
         } else {
-          this.$set(this.showFullTextItem, field.name, item);
+          this.$set(this.showFullTextItem, field, item);
         }
       }
     },
@@ -455,6 +461,7 @@ export default {
       const formattedDate = new Date(date).toLocaleDateString("pt-BR");
       return formattedDate;
     },
+
     parseDate(date) {
       const dateParts = date.split("/");
       let formattedDate = "";
@@ -483,7 +490,7 @@ export default {
 
     /* ===== CRUD ===== */
 
-    /* READ */
+    /* READING LOGIC */
     async listRentals() {
       try {
         const rentalsResponse = await Rentals.read(this.params);
@@ -513,9 +520,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [5, 10, 25, this.totalPages];
+        return [5, 10, this.totalPages];
       } else {
-        return [5, 10, 25];
+        return [5, 10];
       }
     },
 
@@ -530,7 +537,6 @@ export default {
       this.listRentals();
     },
 
-    /* CREATE */
     resetValidation() {
       this.$refs.form.resetValidation();
     },
@@ -542,6 +548,7 @@ export default {
       this.dialogReturn = false;
     },
 
+    /* CREATION LOGIC */
     openModalCreate() {
       if (
         this.$refs.form &&
@@ -579,7 +586,7 @@ export default {
             icon: "success",
             title: "Aluguel adicionado com Sucesso!",
             showConfirmButton: false,
-            timer: 2000,
+            timer: 3000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,
@@ -592,13 +599,12 @@ export default {
             showConfirmButton: false,
             toast: true,
             position: "top-end",
-            timer: 3000,
+            timer: 5000,
             timerProgressBar: true,
           });
         }
       }
     },
-
     async openConfirmationModal(title, message) {
       const result = await Swal.fire({
         icon: "warning",
@@ -614,12 +620,13 @@ export default {
       return result.isConfirmed;
     },
 
+    /* RETURN LOGIC */
     async openModalReturn(rental) {
       this.selectedReantalId = rental.id;
 
       const confirmed = await this.openConfirmationModal(
-        "Você deseja devolver este livro?",
-        `Devolver o livro: ${rental.book.name}`
+        `Deseja devolver o do Livro: </br> ${rental.book.name} ?`,
+        "Confirma a devolução do aluguel?"
       );
 
       if (confirmed) {
@@ -633,7 +640,7 @@ export default {
             showConfirmButton: false,
             toast: true,
             position: "top-end",
-            timer: 2000,
+            timer: 3000,
             timerProgressBar: true,
           });
         } catch (error) {
@@ -644,19 +651,20 @@ export default {
             showConfirmButton: false,
             toast: true,
             position: "top-end",
-            timer: 2000,
+            timer: 5000,
             timerProgressBar: true,
           });
         }
       }
     },
 
+    /* DELETE LOGIC */
     async openModalDelete(rental) {
       this.selectedReantalId = rental.id;
 
       const confirmed = await this.openConfirmationModal(
         `Deseja excluir o Aluguel do Livro: </br> ${rental.book.name} ?`,
-        "Confirma a exclusão do aluguel?"
+        "Essa ação não pode ser Desfeita!"
       );
 
       if (confirmed) {
@@ -684,18 +692,18 @@ export default {
             icon: "success",
             text: "Aluguel Excluído com Sucesso!",
             showConfirmButton: false,
-            timer: 2000,
+            timer: 3000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,
           });
         } catch (error) {
           Swal.fire({
-            title: "Erro",
-            text: "Ocorreu um erro ao excluir o aluguel.",
+            title: "Erro ao Excluir Aluguel",
+            text: error.response.errors,
             icon: "error",
             showConfirmButton: false,
-            timer: 2000,
+            timer: 5000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,

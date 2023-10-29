@@ -96,7 +96,7 @@
         </template>
       </v-data-table>
 
-      <!-- FORM Create/Update -->
+      <!-- FORM CREATE/UPDATE -->
       <v-row justify="center">
         <v-dialog v-model="dialogVisible" max-width="600px" persistent>
           <v-card>
@@ -306,7 +306,7 @@ export default {
 
     /* ===== CRUD ===== */
 
-    /* READ */
+    /* READING LOGIC */
     async listUsers() {
       try {
         const response = await Users.read(this.params);
@@ -323,9 +323,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [5, 10, 25, this.totalPages];
+        return [5, 10, this.totalPages];
       } else {
-        return [5, 10, 25];
+        return [5, 10];
       }
     },
 
@@ -339,7 +339,6 @@ export default {
       this.listUsers();
     },
 
-    /* CREATE/UPDATE */
     resetValidation() {
       this.$refs.form.resetValidation();
     },
@@ -354,6 +353,7 @@ export default {
       this.resetValidation();
     },
 
+    /* CREATION LOGIC */
     openModalCreate() {
       if (
         this.$refs.form &&
@@ -366,6 +366,7 @@ export default {
       this.submitButtonLabel = "Salvar";
     },
 
+    /* UPDATED LOGIC */
     openModalUpdate(user) {
       this.selectedUserId = user.id;
       this.name = user.name;
@@ -442,9 +443,9 @@ export default {
               title: "Erro ao atualizar Usuário",
               text: error.response.data.errors,
               showConfirmButton: false,
+              timer: 5000,
               toast: true,
               position: "top-end",
-              timer: 5000,
               timerProgressBar: true,
             });
           }
@@ -452,11 +453,11 @@ export default {
       }
     },
 
-    /* DELETE */
+    /* DELETE LOGIC */
     async openModalDelete(user) {
       const result = await Swal.fire({
         icon: "warning",
-        title: "Deseja excluir o usuário?",
+        title: `Deseja excluir o usuário </br>${user.name} ?`,
         text: "Essa ação não pode ser Desfeita!",
         showCancelButton: true,
         cancelButtonText: "Cancelar",
@@ -490,7 +491,7 @@ export default {
             icon: "success",
             title: "Usuário Excluído com Sucesso!",
             showConfirmButton: false,
-            timer: 2000,
+            timer: 3000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,
@@ -501,7 +502,7 @@ export default {
             title: "Erro ao Excluir Usuário",
             text: error.response.data.errors,
             showConfirmButton: false,
-            timer: 3000,
+            timer: 5000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,

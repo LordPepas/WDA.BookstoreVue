@@ -150,7 +150,7 @@ export default {
           ? lastRental.book.name
           : "Não há registros de aluguéis";
       } catch (error) {
-        this.lastRental = [];
+        this.lastRental = null;
       }
     },
   },

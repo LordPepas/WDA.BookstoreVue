@@ -75,7 +75,7 @@
         </template>
       </v-data-table>
 
-      <!-- FORM Create/Update -->
+      <!-- FORM CREATE/UPDATE -->
       <v-row justify="center">
         <v-dialog v-model="dialogVisible" max-width="600px" persistent>
           <v-card>
@@ -105,7 +105,7 @@
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <v-btn class="" @click="closeModal" color="error" text
-                  >Cancelar</v-btn
+                    >Cancelar</v-btn
                   >
                   <v-btn
                     class="mr-2"
@@ -129,7 +129,6 @@
 <script>
 import AppPageHeader from "@/components/AppPageHeader.vue";
 import Publisher from "@/services/Publishers";
-// import { max } from "date-fns";
 import Swal from "sweetalert2";
 
 export default {
@@ -191,10 +190,10 @@ export default {
         (v) =>
           (v && v.length <= 25) || "A cidade deve ter no máximo 25 caracteres",
       ],
+      itemsPerPage: 10,
       totalItems: null,
       totalPages: null,
       sortBy: "",
-      itemsPerPage: 10,
       noDataText: "Carregando dados... Aguarde!",
       pageTitle: "Editoras",
       search: "",
@@ -237,7 +236,7 @@ export default {
 
     /* ===== CRUD ===== */
 
-    /* READ */
+    /* READING LOGIC */
     async listPublishers() {
       try {
         const response = await Publisher.read(this.params);
@@ -272,19 +271,18 @@ export default {
       this.listPublishers();
     },
 
-    /* CREATE/UPDATE */
     resetValidation() {
       this.$refs.form.resetValidation();
     },
 
     closeModal() {
-      this.selectedPublisherId = null;
       this.name = "";
       this.city = "";
-      this.resetValidation();
+      this.selectedPublisherId = null;
       this.dialogVisible = false;
+      this.resetValidation();
     },
-
+    /* CREATION LOGIC */
     openModalCreate() {
       if (
         this.$refs.form &&
@@ -296,7 +294,7 @@ export default {
       this.dialogVisible = true;
       this.submitButtonLabel = "Salvar";
     },
-
+    /* UPDATE LOGIC */
     openModalUpdate(publisher) {
       this.selectedPublisherId = publisher.id;
       this.name = publisher.name;
@@ -318,7 +316,7 @@ export default {
           city: this.city.trim(),
         };
         if (!this.selectedPublisherId) {
-          try { 
+          try {
             await Publisher.create(publisherData);
 
             this.closeModal();
@@ -328,7 +326,7 @@ export default {
               icon: "success",
               title: "Editora adicionada com Sucesso!",
               showConfirmButton: false,
-              timer: 2000,
+              timer: 3000,
               toast: true,
               position: "top-end",
               timerProgressBar: true,
@@ -341,7 +339,7 @@ export default {
               showConfirmButton: false,
               toast: true,
               position: "top-end",
-              timer: 3000,
+              timer: 5000,
               timerProgressBar: true,
             });
           }
@@ -356,9 +354,9 @@ export default {
             this.listPublishers();
             Swal.fire({
               icon: "success",
-              title: "Editora atualizada com Sucesso!",
+              title: "Editora atualizada com Sucesso.",
               showConfirmButton: false,
-              timer: 2000,
+              timer: 3000,
               toast: true,
               position: "top-end",
               timerProgressBar: true,
@@ -366,12 +364,12 @@ export default {
           } catch (error) {
             Swal.fire({
               icon: "error",
-              title: "Erro ao atualizar Editora",
+              title: "Erro ao atualizar Editora.",
               text: error.response.data.errors,
               showConfirmButton: false,
               toast: true,
               position: "top-end",
-              timer: 3000,
+              timer: 5000,
               timerProgressBar: true,
             });
           }
@@ -379,11 +377,11 @@ export default {
       }
     },
 
-    /* DELETE */
+    /* DELETE LOGIC */
     async openModalDelete(publisher) {
       const result = await Swal.fire({
         icon: "warning",
-        title: "Deseja excluir a editora?",
+        title: `Deseja excluir a editora </br>${publisher.name} ?`,
         text: "Essa ação não pode ser Desfeita!",
         showCancelButton: true,
         confirmButtonText: "Excluir!",
@@ -417,7 +415,7 @@ export default {
             icon: "success",
             title: "Editora Excluída com Sucesso!",
             showConfirmButton: false,
-            timer: 2000,
+            timer: 3000,
             toast: true,
             position: "top-end",
             timerProgressBar: true,
@@ -428,9 +426,9 @@ export default {
             title: "Erro ao Excluir Editora",
             text: error.response.data.errors,
             showConfirmButton: false,
+            timer: 5000,
             toast: true,
             position: "top-end",
-            timer: 3000,
             timerProgressBar: true,
           });
         }
