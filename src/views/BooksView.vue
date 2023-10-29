@@ -1,179 +1,187 @@
 <template>
-  <div class="d-flex flex-column justify-end align-end mt-2">
-    <v-container>
-      <AppPageHeader
-        :pageTitle="pageTitle"
-        :search.sync="search"
-        @open-create-modal="openModalCreate"
-      />
+  <v-container class="mt-2">
+    <AppPageHeader
+      :pageTitle="pageTitle"
+      :search.sync="search"
+      @open-create-modal="openModalCreate"
+    />
+    <v-data-table
+      :headers="headers"
+      :items="booksData"
+      :header-props="headerProps"
+      :sort-desc="params.orderDesc"
+      :sort-by="params.orderBy"
+      :server-items-length="totalItems"
+      :items-per-page="itemsPerPage"
+      :page="params.pageNumber"
+      @update:options="handleOptionsUpdate"
+      :footer-props="{
+        itemsPerPageOptions: generateItemsPerPageOptions(),
+        itemsPerPageText: 'Linhas por página',
+      }"
+      mobile-breakpoint="1020"
+      class="align-center px-4 py-4"
+      :no-data-text="noDataText"
+    >
+      <template v-slot:[`item.name`]="{ item }">
+        <div @click="toggleFullText(item, 'name', 16)">
+          {{
+            modalFormData["name"] === item
+              ? item.name
+              : truncateText(item.name, 16)
+          }}
+        </div>
+      </template>
+      <template v-slot:[`item.author`]="{ item }">
+        <div @click="toggleFullText(item, 'author', 16)">
+          {{
+            modalFormData["author"] === item
+              ? item.author
+              : truncateText(item.author, 16)
+          }}
+        </div>
+      </template>
+      <template v-slot:[`item.publisher.name`]="{ item }">
+        <div @click="toggleFullText(item, 'publisher.name', 16)">
+          {{
+            modalFormData["publisher.name"] === item
+              ? item.publisher.name
+              : truncateText(item.publisher.name, 16)
+          }}
+        </div>
+      </template>
 
-      <!-- Tabela de Dados -->
-      <v-data-table
-        :headers="headers"
-        :items="booksData"
-        :header-props="headerProps"
-        :sort-desc="params.orderDesc"
-        :sort-by="params.orderBy"
-        :server-items-length="totalItems"
-        :items-per-page="itemsPerPage"
-        :page="params.pageNumber"
-        @update:options="handleOptionsUpdate"
-        :footer-props="{
-          itemsPerPageOptions: generateItemsPerPageOptions(),
-          itemsPerPageText: 'Linhas por página',
-        }"
-        mobile-breakpoint="1020"
-        class="align-center px-4 py-4"
-        :no-data-text="noDataText"
-      >
-        <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name', 16)">
-            {{
-              showFullTextItem["name"] === item
-                ? item.name
-                : truncateText(item.name, 16)
-            }}
-          </div>
-        </template>
-        <template v-slot:[`item.author`]="{ item }">
-          <div @click="toggleFullText(item, 'author', 16)">
-            {{
-              showFullTextItem["author"] === item
-                ? item.author
-                : truncateText(item.author, 16)
-            }}
-          </div>
-        </template>
-        <template v-slot:[`item.publisher.name`]="{ item }">
-          <div @click="toggleFullText(item, 'publisher.name', 16)">
-            {{
-              showFullTextItem["publisher.name"] === item
-                ? item.publisher.name
-                : truncateText(item.publisher.name, 16)
-            }}
-          </div>
-        </template>
+      <template v-slot:[`item.actions`]="{ item }">
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              color="info"
+              @click="openModalUpdate(item)"
+              v-on="on"
+              >mdi-notebook-edit-outline</v-icon
+            >
+          </template>
+          <span>Editar</span>
+        </v-tooltip>
 
-        <template v-slot:[`item.actions`]="{ item }">
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                color="info"
-                @click="openModalUpdate(item)"
-                v-on="on"
-                >mdi-notebook-edit-outline</v-icon
-              >
-            </template>
-            <span>Editar</span>
-          </v-tooltip>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              color="error"
+              @click="openModalDelete(item)"
+              v-on="on"
+              >mdi-trash-can-outline</v-icon
+            >
+          </template>
+          <span>Excluir</span>
+        </v-tooltip>
+      </template>
+    </v-data-table>
 
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                color="error"
-                @click="openModalDelete(item)"
-                v-on="on"
-                >mdi-trash-can-outline</v-icon
-              >
-            </template>
-            <span>Excluir</span>
-          </v-tooltip>
-        </template>
-      </v-data-table>
-
-      <!-- FORM CREATE/UPDATE -->
-      <v-row justify="center">
-        <v-dialog v-model="dialogVisible" max-width="600px" persistent>
-          <v-card>
-            <v-card-title>
-              <span class="text-h5">
-                {{ selectedBookId ? "Editar livro" : "Adicionar livro" }}
-              </span>
-            </v-card-title>
-            <v-card-text>
-              <v-form ref="form" @submit.prevent="submitAction">
-                <v-text-field
-                  v-model="name"
-                  :rules="nameRules"
-                  :counter="45"
-                  label="Título"
-                  append-icon="mdi-book-open-page-variant"
-                  required
-                ></v-text-field>
-                <v-text-field
-                  v-model="author"
-                  :rules="authorRules"
-                  :counter="45"
-                  label="Autor"
-                  append-icon="mdi-account"
-                  required
-                ></v-text-field>
-                <v-autocomplete
-                  v-model="publishers"
-                  :rules="publishersRules"
-                  :items="publishersData"
-                  item-text="name"
-                  item-value="id"
-                  label="Editora do Livro"
-                  append-icon="mdi-bookshelf"
-                  required
-                  no-data-text="Nenhuma editora encontrado"
-                ></v-autocomplete>
-                <v-text-field
-                  v-model="release"
-                  :rules="releaseRules"
-                  label="Ano de lançamento"
-                  :counter="4"
-                  type="number"
-                  append-icon="mdi-calendar"
-                  required
-                ></v-text-field>
-                <v-text-field
-                  v-model="quantity"
-                  :rules="quantityRules"
-                  label="Quantidade de livros"
-                  :counter="100"
-                  type="number"
-                  append-icon="mdi-book-multiple-outline"
-                  required
-                ></v-text-field>
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
-                  <v-btn
-                    class="mr-2"
-                    type="submit"
-                    :disabled="!isSubmitDisabled && !$refs.form.validate()"
-                    color="primary"
-                    text
-                  >
-                    {{ submitButtonLabel }}
-                  </v-btn>
-                </v-card-actions>
-              </v-form>
-            </v-card-text>
-          </v-card>
-        </v-dialog>
-      </v-row>
-    </v-container>
-  </div>
+    <!-- Form Create/Update -->
+    <v-row justify="center">
+      <v-dialog v-model="dialogVisible" max-width="600px" persistent>
+        <v-card>
+          <v-card-title>
+            <span class="text-h5">
+              {{ selectedBookId ? "Editar livro" : "Adicionar livro" }}
+            </span>
+          </v-card-title>
+          <v-card-text>
+            <v-form ref="form" @submit.prevent="submitAction">
+              <v-text-field
+                v-model="modalFormData.name"
+                :rules="nameRules"
+                :counter="45"
+                label="Título"
+                append-icon="mdi-book-open-page-variant"
+                required
+              ></v-text-field>
+              <v-text-field
+                v-model="modalFormData.author"
+                :rules="authorRules"
+                :counter="45"
+                label="Autor"
+                append-icon="mdi-account"
+                required
+              ></v-text-field>
+              <v-autocomplete
+                v-model="modalFormData.publisherId"
+                :rules="publishersRules"
+                :items="publishersData"
+                item-text="name"
+                item-value="id"
+                label="Editora do Livro"
+                append-icon="mdi-bookshelf"
+                required
+                no-data-text="Nenhuma editora encontrado"
+              ></v-autocomplete>
+              <v-text-field
+                v-model="modalFormData.release"
+                :rules="releaseRules"
+                label="Ano de lançamento"
+                :counter="4"
+                type="number"
+                append-icon="mdi-calendar"
+                required
+              ></v-text-field>
+              <v-text-field
+                v-model="modalFormData.quantity"
+                :rules="quantityRules"
+                label="Quantidade de livros"
+                :counter="100"
+                type="number"
+                append-icon="mdi-book-multiple-outline"
+                required
+              ></v-text-field>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn class="" @click="closeModal" color="error" text
+                  >Cancelar</v-btn
+                >
+                <v-btn
+                  class="mr-2"
+                  type="submit"
+                  :disabled="!isSubmitDisabled && !$refs.form.validate()"
+                  color="primary"
+                  text
+                >
+                  {{ submitButtonLabel }}
+                </v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+    </v-row>
+  </v-container>
 </template>
 
 <script>
-import AppPageHeader from "@/components/AppPageHeader";
+import AppPageHeader from "@/components/AppPageHeader.vue";
 import Books from "@/services/Books";
-import Publisher from "@/services/Publishers";
+import Publishers from "@/services/Publishers";
 import Swal from "sweetalert2";
 
 export default {
+  components: {
+    AppPageHeader,
+  },
   data() {
     return {
+      // General info
+      pageTitle: "Livros",
+      search: "",
+      // Table data
       booksData: [],
       publishersData: [],
+      totalItems: null,
+      totalPages: null,
+      itemsPerPage: 10,
+      sortBy: "",
+      noDataText: "Carregando dados... Aguarde!",
       params: {
         searchValue: "",
         pageNumber: 1,
@@ -181,15 +189,6 @@ export default {
         orderDesc: false,
         itemsPerPage: null,
       },
-      name: "",
-      publishers: "",
-      author: "",
-      quantity: "",
-      release: "",
-      submitButtonLabel: "",
-      dialogVisible: false,
-      selectedBookId: null,
-      isSubmitDisabled: true,
       headerProps: {
         sortByText: "Ordenar Por",
       },
@@ -199,51 +198,44 @@ export default {
           align: "start",
           sortable: true,
           value: "id",
-          padding: "2px",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Nome",
-          align: "center",
           value: "name",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Autor",
-          align: "center",
           value: "author",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Editora",
           value: "publisher.name",
-          align: "center",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Lançamento",
-          align: "center",
           value: "release",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Quantidade",
           value: "quantity",
-          align: "center",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Alugados",
-          align: "center",
           value: "rented",
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
         {
           text: "Ações",
           align: "center",
           value: "actions",
           sortable: false,
-          class: "text-md-body-1 font-weight-bold ",
+          class: "text-md-body-1 font-weight-bold",
         },
       ],
       nameRules: [
@@ -270,27 +262,21 @@ export default {
         (v) => v >= 0 || "A quantidade nao deve ser menor que um",
         (v) => v <= 100 || "A quantidade deve ser menor que cem",
       ],
-      totalItems: 0,
-      totalPages: 0,
-      sortBy: "",
-      itemsPerPage: 10,
-      noDataText: "Carregando dados... Aguarde!",
-      pageTitle: "Livros",
-      search: "",
-      showFullTextItem: {
+      modalFormData: {
         name: null,
         author: null,
+        publisherId: null,
         publisher: {
           name: null,
         },
+        release: null,
+        quantity: null,
       },
+      selectedBookId: null,
+      isSubmitDisabled: true,
+      submitButtonLabel: "",
+      dialogVisible: false,
     };
-  },
-  components: {
-    AppPageHeader,
-  },
-  mounted() {
-    this.listBooks();
   },
   watch: {
     search: {
@@ -302,15 +288,17 @@ export default {
       deep: false,
     },
   },
+  mounted() {
+    this.listBooks();
+  },
   methods: {
     toggleFullText(item, field, maxLength) {
       const fieldValue = field.split(".").reduce((obj, key) => obj[key], item);
-
       if (fieldValue && fieldValue.length > maxLength) {
-        if (this.showFullTextItem[field] === item) {
-          this.$set(this.showFullTextItem, field, null);
+        if (this.modalFormData[field] === item) {
+          this.$set(this.modalFormData, field, null);
         } else {
-          this.$set(this.showFullTextItem, field, item);
+          this.$set(this.modalFormData, field, item);
         }
       }
     },
@@ -321,7 +309,7 @@ export default {
 
     /* ===== CRUD ===== */
 
-    /* READ */
+    /* READING LOGIC */
     async listBooks() {
       try {
         const booksResponse = await Books.read(this.params);
@@ -337,7 +325,7 @@ export default {
         this.totalPages = null;
       }
       try {
-        const publisherResponse = await Publisher.readSummary();
+        const publisherResponse = await Publishers.readSummary();
         this.publishersData = publisherResponse.data.data;
       } catch (error) {
         this.publishersData = [];
@@ -357,26 +345,26 @@ export default {
       this.params.orderDesc = options.sortDesc[0];
       this.params.itemsPerPage = options.itemsPerPage;
       this.params.pageNumber = options.page;
-
       this.itemsPerPage = this.params.itemsPerPage;
       this.listBooks();
     },
 
-    /* CREATE/UPDATE */
     resetValidation() {
       this.$refs.form.resetValidation();
     },
 
     closeModal() {
-      (this.selectedBookId = null), (this.name = "");
-      this.author = "";
-      this.publishers = "";
-      this.release = "";
-      this.quantity = "";
+      this.selectedBookId = null,
+      this.modalFormData.name = "";
+      this.modalFormData.author = "";
+      this.modalFormData.publisherId = "";
+      this.modalFormData.release = "";
+      this.modalFormData.quantity = "";
       this.dialogVisible = false;
       this.resetValidation();
     },
 
+    /* CREATION LOGIC */
     openModalCreate() {
       if (
         this.$refs.form &&
@@ -389,18 +377,16 @@ export default {
       this.submitButtonLabel = "Salvar";
     },
 
+    /* UPDATE LOGIC */
     openModalUpdate(book) {
       this.dialogVisible = true;
       this.isSubmitDisabled = true;
       this.selectedBookId = book.id;
-      this.name = book.name;
-      this.author = book.author;
-      const selectedPublisher = this.publishersData.find(
-        (publisher) => publisher.name === book.publisher.name
-      );
-      this.publishers = selectedPublisher.name;
-      this.release = book.release;
-      this.quantity = book.quantity;
+      this.modalFormData.name = book.name;
+      this.modalFormData.author = book.author;
+      this.modalFormData.publisherId = book.publisherId;
+      this.modalFormData.release = book.release;
+      this.modalFormData.quantity = book.quantity;
       this.submitButtonLabel = "Atualizar";
     },
 
@@ -411,19 +397,16 @@ export default {
           this.isSubmitDisabled = false;
           return;
         }
-        const selectedPublisher = await this.publishersData.find(
-          (publisher) => publisher.name === this.publishers
-        );
-        const bookData = {
-          name: this.name.trim(),
-          author: this.author.trim(),
-          publisherId: selectedPublisher.id,
-          release: this.release,
-          quantity: this.quantity,
+        const newBook = {
+          name: this.modalFormData.name.trim(),
+          author: this.modalFormData.author.trim(),
+          publisherId: this.modalFormData.publisherId,
+          release: this.modalFormData.release,
+          quantity: this.modalFormData.quantity,
         };
         if (!this.selectedBookId) {
           try {
-            await Books.create(bookData);
+            await Books.create(newBook);
             this.listBooks();
             this.closeModal();
             Swal.fire({
@@ -448,13 +431,12 @@ export default {
             });
           }
         } else {
-          const update = {
+          const updatePublisher = {
             id: this.selectedBookId,
-            ...bookData,
+            ...newBook,
           };
           try {
-            await Books.update(update);
-
+            await Books.update(updatePublisher);
             this.listBooks();
             this.closeModal();
             Swal.fire({
@@ -482,7 +464,7 @@ export default {
       }
     },
 
-    /* DELETE */
+    /* DELETE LOGIC */
     async openModalDelete(book) {
       const result = await Swal.fire({
         icon: "warning",
@@ -531,9 +513,9 @@ export default {
             title: "Erro ao excluir o livro",
             text: error.response.data.errors,
             showConfirmButton: false,
+            timer: 5000,
             toast: true,
             position: "top-end",
-            timer: 5000,
             timerProgressBar: true,
           });
         }

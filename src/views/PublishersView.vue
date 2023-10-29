@@ -1,140 +1,148 @@
 <template>
-  <div class="d-flex flex-column justify-end align-end mt-2">
-    <v-container>
-      <AppPageHeader
-        :pageTitle="pageTitle"
-        :search.sync="search"
-        @open-create-modal="openModalCreate"
-      />
+  <v-container class="mt-2">
+    <AppPageHeader
+      :pageTitle="pageTitle"
+      :search.sync="search"
+      @open-create-modal="openModalCreate"
+    />
+    <v-data-table
+      :headers="headers"
+      :items="publishersData"
+      :header-props="headerProps"
+      :sort-desc="params.orderDesc"
+      :sort-by="params.orderBy"
+      :page="params.pageNumber"
+      :server-items-length="totalItems"
+      :items-per-page="itemsPerPage"
+      @update:options="handleOptionsUpdate"
+      :footer-props="{
+        itemsPerPageOptions: generateItemsPerPageOptions(),
+        itemsPerPageText: 'Linhas por página',
+      }"
+      mobile-breakpoint="1020"
+      class="align-center px-4 py-4"
+      :no-data-text="noDataText"
+    >
+      <template v-slot:[`item.name`]="{ item }">
+        <div @click="toggleFullText(item, 'name', 16)">
+          {{
+            modalFormData["name"] === item
+              ? item.name
+              : truncateText(item.name, 16)
+          }}
+        </div>
+      </template>
 
-      <!-- Tabela de Dados -->
-      <v-data-table
-        :headers="headers"
-        :items="publishersData"
-        :header-props="headerProps"
-        :sort-desc="params.orderDesc"
-        :sort-by="params.orderBy"
-        :page="params.pageNumber"
-        :server-items-length="totalItems"
-        :items-per-page="itemsPerPage"
-        @update:options="handleOptionsUpdate"
-        :footer-props="{
-          itemsPerPageOptions: generateItemsPerPageOptions(),
-          itemsPerPageText: 'Linhas por página',
-        }"
-        mobile-breakpoint="1020"
-        class="align-center px-4 py-4"
-        :no-data-text="noDataText"
-      >
-        <template v-slot:[`item.name`]="{ item }">
-          <div @click="toggleFullText(item, 'name', 16)">
-            {{
-              showFullTextItem["name"] === item
-                ? item.name
-                : truncateText(item.name, 16)
-            }}
-          </div>
-        </template>
+      <template v-slot:[`item.city`]="{ item }">
+        <div @click="toggleFullText(item, 'city', 16)">
+          {{
+            modalFormData["city"] === item
+              ? item.city
+              : truncateText(item.city, 16)
+          }}
+        </div>
+      </template>
 
-        <template v-slot:[`item.city`]="{ item }">
-          <div @click="toggleFullText(item, 'city', 16)">
-            {{
-              showFullTextItem["city"] === item
-                ? item.city
-                : truncateText(item.city, 16)
-            }}
-          </div>
-        </template>
+      <template v-slot:[`item.actions`]="{ item }">
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              color="info"
+              @click="openModalUpdate(item)"
+              v-on="on"
+              >mdi-storefront-edit-outline</v-icon
+            >
+          </template>
+          <span>Editar</span>
+        </v-tooltip>
 
-        <template v-slot:[`item.actions`]="{ item }">
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                color="info"
-                @click="openModalUpdate(item)"
-                v-on="on"
-                >mdi-storefront-edit-outline</v-icon
-              >
-            </template>
-            <span>Editar</span>
-          </v-tooltip>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              color="error"
+              @click="openModalDelete(item)"
+              v-on="on"
+              >mdi-trash-can-outline</v-icon
+            >
+          </template>
+          <span>Excluir</span>
+        </v-tooltip>
+      </template>
+    </v-data-table>
 
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                color="error"
-                @click="openModalDelete(item)"
-                v-on="on"
-                >mdi-trash-can-outline</v-icon
-              >
-            </template>
-            <span>Excluir</span>
-          </v-tooltip>
-        </template>
-      </v-data-table>
-
-      <!-- FORM CREATE/UPDATE -->
-      <v-row justify="center">
-        <v-dialog v-model="dialogVisible" max-width="600px" persistent>
-          <v-card>
-            <v-card-title>
-              <span class="text-h5">{{
-                selectedPublisherId ? "Editar editora" : "Adicionar editora"
-              }}</span>
-            </v-card-title>
-            <v-card-text>
-              <v-form ref="form" @submit.prevent="submitAction">
-                <v-text-field
-                  v-model="name"
-                  :rules="nameRules"
-                  :counter="25"
-                  label="Nome"
-                  append-icon="mdi-bookshelf"
-                  required
-                ></v-text-field>
-                <v-text-field
-                  v-model="city"
-                  :rules="cityRules"
-                  :counter="25"
-                  label="Cidade"
-                  append-icon="mdi-city-variant-outline"
-                  required
-                ></v-text-field>
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
-                  <v-btn
-                    class="mr-2"
-                    type="submit"
-                    :disabled="!isSubmitDisabled && !$refs.form.validate()"
-                    color="primary"
-                    text
-                  >
-                    {{ submitButtonLabel }}
-                  </v-btn>
-                </v-card-actions>
-              </v-form>
-            </v-card-text>
-          </v-card>
-        </v-dialog>
-      </v-row>
-    </v-container>
-  </div>
+    <!-- Form Create/Update -->
+    <v-row justify="center">
+      <v-dialog v-model="dialogVisible" max-width="600px" persistent>
+        <v-card>
+          <v-card-title>
+            <span class="text-h5">{{
+              selectedPublisherId ? "Editar editora" : "Adicionar editora"
+            }}</span>
+          </v-card-title>
+          <v-card-text>
+            <v-form ref="form" @submit.prevent="submitAction">
+              <v-text-field
+                v-model="modalFormData.name"
+                :rules="nameRules"
+                :counter="25"
+                label="Nome"
+                append-icon="mdi-bookshelf"
+                required
+              ></v-text-field>
+              <v-text-field
+                v-model="modalFormData.city"
+                :rules="cityRules"
+                :counter="25"
+                label="Cidade"
+                append-icon="mdi-city-variant-outline"
+                required
+              ></v-text-field>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn class="" @click="closeModal" color="error" text
+                  >Cancelar</v-btn
+                >
+                <v-btn
+                  class="mr-2"
+                  type="submit"
+                  :disabled="!isSubmitDisabled && !$refs.form.validate()"
+                  color="primary"
+                  text
+                >
+                  {{ submitButtonLabel }}
+                </v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+    </v-row>
+  </v-container>
 </template>
 
 <script>
 import AppPageHeader from "@/components/AppPageHeader.vue";
-import Publisher from "@/services/Publishers";
+import Publishers from "@/services/Publishers";
 import Swal from "sweetalert2";
 
 export default {
+  components: {
+    AppPageHeader,
+  },
   data() {
     return {
+      // General info
+      pageTitle: "Editoras",
+      search: "",
+      // Table data
       publishersData: [],
+      totalItems: null,
+      totalPages: null,
+      itemsPerPage: 10,
+      sortBy: "",
+      noDataText: "Carregando dados... Aguarde!",
       params: {
         searchValue: "",
         pageNumber: 1,
@@ -142,12 +150,6 @@ export default {
         orderDesc: false,
         itemsPerPage: null,
       },
-      name: "",
-      city: "",
-      submitButtonLabel: "",
-      dialogVisible: false,
-      selectedPublisherId: null,
-      isSubmitDisabled: true,
       headerProps: {
         sortByText: "Ordenar Por",
       },
@@ -171,6 +173,7 @@ export default {
         },
         {
           text: "Ações",
+          align: "center",
           value: "actions",
           sortable: false,
           class: "text-md-body-1 font-weight-bold",
@@ -190,24 +193,15 @@ export default {
         (v) =>
           (v && v.length <= 25) || "A cidade deve ter no máximo 25 caracteres",
       ],
-      itemsPerPage: 10,
-      totalItems: null,
-      totalPages: null,
-      sortBy: "",
-      noDataText: "Carregando dados... Aguarde!",
-      pageTitle: "Editoras",
-      search: "",
-      showFullTextItem: {
+      modalFormData: {
         name: null,
         city: null,
       },
+      selectedPublisherId: null,
+      isSubmitDisabled: true,
+      submitButtonLabel: "",
+      dialogVisible: false,
     };
-  },
-  components: {
-    AppPageHeader,
-  },
-  mounted() {
-    this.listPublishers();
   },
   watch: {
     search: {
@@ -219,13 +213,16 @@ export default {
       deep: false,
     },
   },
+  mounted() {
+    this.listPublishers();
+  },
   methods: {
     toggleFullText(item, field, maxLength) {
       if (item[field].length > maxLength) {
-        if (this.showFullTextItem[field] === item) {
-          this.$set(this.showFullTextItem, field, null);
+        if (this.modalFormData[field] === item) {
+          this.$set(this.modalFormData, field, null);
         } else {
-          this.$set(this.showFullTextItem, field, item);
+          this.$set(this.modalFormData, field, item);
         }
       }
     },
@@ -239,7 +236,7 @@ export default {
     /* READING LOGIC */
     async listPublishers() {
       try {
-        const response = await Publisher.read(this.params);
+        const response = await Publishers.read(this.params);
 
         this.publishersData = response.data.data;
 
@@ -266,7 +263,6 @@ export default {
       this.params.orderDesc = options.sortDesc[0];
       this.params.itemsPerPage = options.itemsPerPage;
       this.params.pageNumber = options.page;
-
       this.itemsPerPage = this.params.itemsPerPage;
       this.listPublishers();
     },
@@ -276,12 +272,13 @@ export default {
     },
 
     closeModal() {
-      this.name = "";
-      this.city = "";
+      this.modalFormData.name = "";
+      this.modalFormData.city = "";
       this.selectedPublisherId = null;
       this.dialogVisible = false;
       this.resetValidation();
     },
+
     /* CREATION LOGIC */
     openModalCreate() {
       if (
@@ -294,11 +291,12 @@ export default {
       this.dialogVisible = true;
       this.submitButtonLabel = "Salvar";
     },
+
     /* UPDATE LOGIC */
     openModalUpdate(publisher) {
       this.selectedPublisherId = publisher.id;
-      this.name = publisher.name;
-      this.city = publisher.city;
+      this.modalFormData.name = publisher.name;
+      this.modalFormData.city = publisher.city;
       this.dialogVisible = true;
       this.isSubmitDisabled = true;
       this.submitButtonLabel = "Atualizar";
@@ -311,17 +309,15 @@ export default {
           this.isSubmitDisabled = false;
           return;
         }
-        const publisherData = {
-          name: this.name.trim(),
-          city: this.city.trim(),
+        const newPublisher = {
+          name: this.modalFormData.name.trim(),
+          city: this.modalFormData.city.trim(),
         };
         if (!this.selectedPublisherId) {
           try {
-            await Publisher.create(publisherData);
-
+            await Publishers.create(newPublisher);
             this.closeModal();
             this.listPublishers();
-
             Swal.fire({
               icon: "success",
               title: "Editora adicionada com Sucesso!",
@@ -346,10 +342,10 @@ export default {
         } else {
           const updatePublisher = {
             id: this.selectedPublisherId,
-            ...publisherData,
+            ...newPublisher,
           };
           try {
-            await Publisher.update(updatePublisher);
+            await Publishers.update(updatePublisher);
             this.closeModal();
             this.listPublishers();
             Swal.fire({
@@ -392,7 +388,7 @@ export default {
 
       if (result.isConfirmed) {
         try {
-          await Publisher.delete(publisher.id);
+          await Publishers.delete(publisher.id);
 
           if (this.totalItems > this.params.itemsPerPage) {
             this.totalItems--;

@@ -1,251 +1,242 @@
 <template>
-  <div class="d-flex flex-column justify-end align-end mt-2">
-    <v-container>
-      <AppPageHeader
-        :pageTitle="pageTitle"
-        :search.sync="search"
-        @open-create-modal="openModalCreate"
-      />
+  <v-container class="mt-2">
+    <AppPageHeader
+      :pageTitle="pageTitle"
+      :search.sync="search"
+      @open-create-modal="openModalCreate"
+    />
+    <v-data-table
+      :headers="headers"
+      :items="rentalsData"
+      :header-props="headerProps"
+      :sort-desc="params.orderDesc"
+      :sort-by="params.orderBy"
+      :server-items-length="totalItems"
+      :items-per-page="itemsPerPage"
+      :page="params.pageNumber"
+      @update:options="handleOptionsUpdate"
+      :footer-props="{
+        itemsPerPageOptions: generateItemsPerPageOptions(),
+        itemsPerPageText: 'Linhas por página',
+      }"
+      mobile-breakpoint="1020"
+      class="align-center px-4 py-4"
+      :no-data-text="noDataText"
+    >
+      <template v-slot:[`item.book.name`]="{ item }">
+        <v-tooltip bottom nudge-left>
+          <template v-slot:activator="{ on }">
+            <div @click="toggleFullText(item, 'book.name', 16)" v-on="on">
+              {{
+                modalFormData["book.name"] === item
+                  ? item.book.name
+                  : truncateText(item.book.name, 16)
+              }}
+            </div>
+          </template>
+          <span>{{
+            modalFormData["book.name"] === item
+              ? "Mostrar Menos"
+              : "Mostrar Mais"
+          }}</span>
+        </v-tooltip>
+      </template>
 
-      <!-- Tabela de Dados -->
-      <v-data-table
-        :headers="headers"
-        :items="rentalsData"
-        :header-props="headerProps"
-        :sort-desc="params.orderDesc"
-        :sort-by="params.orderBy"
-        :server-items-length="totalItems"
-        :items-per-page="itemsPerPage"
-        :page="params.pageNumber"
-        @update:options="handleOptionsUpdate"
-        :footer-props="{
-          itemsPerPageOptions: generateItemsPerPageOptions(),
-          itemsPerPageText: 'Linhas por página',
-        }"
-        mobile-breakpoint="1020"
-        class="align-center px-4 py-4"
-        :no-data-text="noDataText"
-      >
-        <template v-slot:[`item.user.name`]="{ item }">
-          <div @click="toggleFullText(item, 'user.name', 16)">
-            {{
-              showFullTextItem["user.name"] === item
-                ? item.user.name
-                : truncateText(item.user.name)
-            }}
-          </div>
-        </template>
+      <template v-slot:[`item.user.name`]="{ item }">
+        <div @click="toggleFullText(item, 'user.name', 16)">
+          {{
+            modalFormData["user.name"] === item
+              ? item.user.name
+              : truncateText(item.user.name, 16)
+          }}
+        </div>
+      </template>
+      <template v-slot:[`item.rentalDate`]="{ item }">
+        {{ formatDate(item.rentalDate) }}
+      </template>
 
-        <template v-slot:[`item.book.name`]="{ item }">
-          <v-tooltip bottom nudge-left>
-            <template v-slot:activator="{ on }">
-              <div @click="toggleFullText(item, 'book.name', 16)" v-on="on">
-                {{
-                  showFullTextItem["book.name"] === item
-                    ? item.book.name
-                    : truncateText(item.book.name, 16)
-                }}
-              </div>
-            </template>
-            <span>{{
-              showFullTextItem["book.name"] === item
-                ? "Mostrar Menos"
-                : "Mostrar Mais"
-            }}</span>
-          </v-tooltip>
-        </template>
+      <template v-slot:[`item.previsionDate`]="{ item }">
+        {{ formatDate(item.previsionDate) }}
+      </template>
 
-        <template v-slot:[`item.rentalDate`]="{ item }">
-          {{ formatDate(item.rentalDate) }}
-        </template>
+      <template v-slot:[`item.returnDate`]="{ item }">
+        {{ item.returnDate ? formatDate(item.returnDate) : null }}
+      </template>
 
-        <template v-slot:[`item.previsionDate`]="{ item }">
-          {{ formatDate(item.previsionDate) }}
-        </template>
+      <template v-slot:[`item.actions`]="{ item }">
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              v-if="
+                item.status === 'Pendente' && item.previsionDate < todayDate()
+              "
+              color="warning"
+              @click="openModalReturn(item)"
+              v-on="on"
+            >
+              mdi-book-clock-outline
+            </v-icon>
+          </template>
+          <span>Devolver em atraso</span>
+        </v-tooltip>
 
-        <template v-slot:[`item.returnDate`]="{ item }">
-          {{ item.returnDate ? formatDate(item.returnDate) : null }}
-        </template>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              v-if="
+                item.status === 'Pendente' && item.previsionDate > todayDate()
+              "
+              color="success"
+              @click="openModalReturn(item)"
+              v-on="on"
+            >
+              mdi-book-arrow-up-outline
+            </v-icon>
+          </template>
+          <span>Devolver</span>
+        </v-tooltip>
 
-        <template v-slot:[`item.actions`]="{ item }">
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                v-if="
-                  item.status === 'Pendente' && item.previsionDate < todayDate()
-                "
-                color="warning"
-                @click="openModalReturn(item)"
-                v-on="on"
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on }">
+            <v-icon
+              variant="plain"
+              v-if="item.status === 'Pendente'"
+              color="error"
+              @click="openModalDelete(item)"
+              v-on="on"
+            >
+              mdi-trash-can-outline
+            </v-icon>
+          </template>
+          <span>Excluir</span>
+        </v-tooltip>
+      </template>
+
+      <template v-slot:[`item.status`]="{ item }">
+        <v-chip outlined dark :color="getStatusColor(item)" class="status-chip">
+          {{ item.status }}
+        </v-chip>
+      </template>
+    </v-data-table>
+
+    <!-- Form Create -->
+    <v-row justify="center">
+      <v-dialog v-model="Createdialog" max-width="600px" persistent>
+        <v-card>
+          <v-card-title>
+            <span class="text-h5">Adicionar aluguel</span>
+          </v-card-title>
+          <v-card-text>
+            <v-form ref="form" @submit.prevent="submitCreate">
+              <v-autocomplete
+                v-model="modalFormData.bookId"
+                :rules="bookRules"
+                :items="booksData"
+                item-text="name"
+                item-value="id"
+                label="Selecione o Livro"
+                append-icon="mdi-book-open-page-variant"
+                required
+                no-data-text="Nenhuma livro encontrado"
+              ></v-autocomplete>
+              <v-autocomplete
+                v-model="modalFormData.userId"
+                :items="usersData"
+                :rules="userRules"
+                item-text="name"
+                item-value="id"
+                label="Selecione o Usuário"
+                append-icon="mdi-account"
+                required
+                no-data-text="Nenhuma usuario encontrado"
+              ></v-autocomplete>
+
+              <v-menu
+                ref="menuRental"
+                v-model="menuRental"
+                :close-on-content-click="false"
+                transition="scale-transition"
+                offset-y
+                max-width="290px"
+                min-width="auto"
               >
-                mdi-book-clock-outline
-              </v-icon>
-            </template>
-            <span>Devolver em atraso</span>
-          </v-tooltip>
-
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                v-if="
-                  item.status === 'Pendente' && item.previsionDate > todayDate()
-                "
-                color="success"
-                @click="openModalReturn(item)"
-                v-on="on"
+                <template v-slot:activator="{ on, attrs }">
+                  <v-text-field
+                    disabled
+                    v-model="formattedRentalDate"
+                    label="Data de aluguel"
+                    hint="DD/MM/YYYY format"
+                    :rules="dateFormattedRules"
+                    persistent-hint
+                    append-icon="mdi-calendar"
+                    @blur="formatDate(modalFormData.rentalDate)"
+                    v-bind="attrs"
+                    v-on="on"
+                    readonly
+                  ></v-text-field>
+                </template>
+                <v-date-picker
+                  v-model="modalFormData.rentalDate"
+                  no-title
+                  @input="menuRental = false"
+                  :min="todayDate()"
+                  :max="todayDate()"
+                ></v-date-picker>
+              </v-menu>
+              <v-menu
+                ref="menuPrevision"
+                v-model="menuPrevision"
+                :close-on-content-click="false"
+                transition="scale-transition"
+                offset-y
+                max-width="290px"
+                min-width="auto"
               >
-                mdi-book-arrow-up-outline
-              </v-icon>
-            </template>
-            <span>Devolver</span>
-          </v-tooltip>
-
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-icon
-                variant="plain"
-                v-if="item.status === 'Pendente'"
-                color="error"
-                @click="openModalDelete(item)"
-                v-on="on"
-              >
-                mdi-trash-can-outline
-              </v-icon>
-            </template>
-            <span>Excluir</span>
-          </v-tooltip>
-        </template>
-
-        <template v-slot:[`item.status`]="{ item }">
-          <v-chip
-            outlined
-            dark
-            :color="getStatusColor(item)"
-            class="status-chip"
-          >
-            {{ item.status }}
-          </v-chip>
-        </template>
-      </v-data-table>
-
-      <!-- FORM CREATE/UPDATE -->
-      <v-row justify="center">
-        <v-dialog v-model="Createdialog" max-width="600px" persistent>
-          <v-card>
-            <v-card-title>
-              <span class="text-h5">Adicionar aluguel</span>
-            </v-card-title>
-            <v-card-text>
-              <v-form ref="form" @submit.prevent="submitCreate">
-                <v-autocomplete
-                  v-model="selectedBook"
-                  :items="booksData"
-                  item-text="name"
-                  item-value="id"
-                  :rules="selectBookRules"
-                  label="Nome do livro"
-                  append-icon="mdi-book-open-page-variant"
-                  required
-                  no-data-text="Nenhuma livro encontrado"
-                ></v-autocomplete>
-                <v-autocomplete
-                  v-model="selectedUser"
-                  :items="usersData"
-                  item-text="name"
-                  item-value="id"
-                  :rules="selectedUserRules"
-                  label="Selecione o Usuário"
-                  append-icon="mdi-account"
-                  required
-                  no-data-text="Nenhuma usuario encontrado"
-                ></v-autocomplete>
-
-                <v-menu
-                  ref="menu1"
-                  v-model="menu1"
-                  :close-on-content-click="false"
-                  transition="scale-transition"
-                  offset-y
-                  max-width="290px"
-                  min-width="auto"
+                <template v-slot:activator="{ on, attrs }">
+                  <v-text-field
+                    v-model="formattedPrevisionDate"
+                    label="Previsão de devolução"
+                    hint="DD/MM/YYYY format"
+                    :rules="previsionDateRules"
+                    persistent-hint
+                    append-icon="mdi-calendar"
+                    @blur="formatDate(modalFormData.previsionDate)"
+                    v-bind="attrs"
+                    v-on="on"
+                    readonly
+                  ></v-text-field>
+                </template>
+                <v-date-picker
+                  v-model="modalFormData.previsionDate"
+                  no-title
+                  @input="menuPrevision = false"
+                  :min="todayDate()"
+                  :max="previsionDateMax()"
+                ></v-date-picker>
+              </v-menu>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn class="" @click="closeModal" color="error" text
+                  >Cancelar</v-btn
                 >
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-text-field
-                      disabled
-                      v-model="formattedRentalDate"
-                      label="Data de aluguel"
-                      hint="DD/MM/YYYY format"
-                      :rules="dateFormattedRules"
-                      persistent-hint
-                      append-icon="mdi-calendar"
-                      @blur="formatDate(rentalDate)"
-                      v-bind="attrs"
-                      v-on="on"
-                    ></v-text-field>
-                  </template>
-                  <v-date-picker
-                    v-model="rentalDate"
-                    no-title
-                    @input="menu1 = false"
-                    :min="todayDate()"
-                    :max="todayDate()"
-                    locale="pt-BR"
-                  ></v-date-picker>
-                </v-menu>
-                <v-menu
-                  ref="menu2"
-                  v-model="menu2"
-                  :close-on-content-click="false"
-                  transition="scale-transition"
-                  offset-y
-                  max-width="290px"
-                  min-width="auto"
+                <v-btn
+                  class="mr-2"
+                  type="submit"
+                  :disabled="!isSubmitDisabled && !$refs.form.validate()"
+                  color="primary"
+                  text
                 >
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-text-field
-                      v-model="formattedPrevisionDate"
-                      label="Previsão de devolução"
-                      hint="MM/DD/YYYY format"
-                      :rules="previsaoDateRules"
-                      persistent-hint
-                      append-icon="mdi-calendar"
-                      @blur="formatDate(previsionDate)"
-                      v-bind="attrs"
-                      v-on="on"
-                    ></v-text-field>
-                  </template>
-                  <v-date-picker
-                    v-model="previsionDate"
-                    no-title
-                    @input="menu2 = false"
-                    :min="todayDate()"
-                    :max="previsionDateMax()"
-                  ></v-date-picker>
-                </v-menu>
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn class="" @click="closeModal" color="error" text
-                    >Cancelar</v-btn
-                  >
-                  <v-btn
-                    class="mr-2"
-                    type="submit"
-                    :disabled="!isSubmitDisabled && !$refs.form.validate()"
-                    color="primary"
-                    text
-                  >
-                    Salvar
-                  </v-btn>
-                </v-card-actions>
-              </v-form>
-            </v-card-text>
-          </v-card>
-        </v-dialog>
-      </v-row>
-    </v-container>
-  </div>
+                  Salvar
+                </v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+    </v-row>
+  </v-container>
 </template>
 
 <script>
@@ -256,23 +247,30 @@ import Swal from "sweetalert2";
 import Users from "@/services/Users";
 
 export default {
+  components: {
+    AppPageHeader,
+  },
   data() {
     return {
+      // General info
+      pageTitle: "Aluguéis",
+      search: "",
+      // Table data
       rentalsData: [],
       usersData: [],
       booksData: [],
+      totalItems: null,
+      totalPages: null,
+      itemsPerPage: 10,
+      sortBy: "",
+      noDataText: "Carregando dados... Aguarde!",
       params: {
         searchValue: "",
+        pageNumber: 1,
         orderBy: "id",
         orderDesc: false,
-        pageNumber: 1,
         itemsPerPage: null,
       },
-      selectedBook: null,
-      selectedUser: null,
-      rentalDate: "",
-      previsionDate: "",
-      devolucaoDate: null,
       Createdialog: false,
       dialogReturn: false,
       selectedReantalId: null,
@@ -327,34 +325,33 @@ export default {
           class: "text-md-body-1 font-weight-bold ",
         },
       ],
-      selectBookRules: [(v) => !!v || "O livro é obrigatório"],
-      selectedUserRules: [(v) => !!v || "O usuário é obrigatório"],
+      bookRules: [(v) => !!v || "O livro é obrigatório"],
+      userRules: [(v) => !!v || "O usuário é obrigatório"],
       dateFormattedRules: [(v) => !!v || "A data de aluguel é obrigatório"],
-      previsaoDateRules: [(v) => !!v || "A data de previsão é obrigatório"],
-      menu1: "",
-      menu2: "",
-      itemsPerPage: 10,
-      totalItems: null,
-      totalPages: null,
-      sortBy: "",
-      noDataText: "Carregando dados... Aguarde!",
-      pageTitle: "Aluguéis",
-      search: "",
-      showFullTextItem: {
+      previsionDateRules: [(v) => !!v || "A data de previsão é obrigatório"],
+      modalFormData: {
+        bookId: null,
+        userId: null,
         user: {
           name: null,
         },
         book: {
           name: null,
         },
+        rentalDate: "",
+        previsionDate: "",
       },
+      menuRental: "",
+      menuPrevision: "",
     };
   },
-  components: {
-    AppPageHeader,
-  },
-  mounted() {
-    this.listRentals();
+  computed: {
+    formattedRentalDate() {
+      return this.formatDate(this.modalFormData.rentalDate, true);
+    },
+    formattedPrevisionDate() {
+      return this.formatDate(this.modalFormData.previsionDate, true);
+    },
   },
   watch: {
     search: {
@@ -378,54 +375,19 @@ export default {
       },
       deep: false,
     },
-
-    aluguelDate(newValue) {
-      this.rentalDate = this.formatDate(newValue);
-    },
-
-    previsaoDate(newValue) {
-      this.previsionDate = this.formatDate(newValue);
-    },
-
-    date() {
-      this.rentalDate = this.parseDate(this.dateRentFormatted);
-    },
   },
-  computed: {
-    formattedRentalDate() {
-      if (this.rentalDate) {
-        const date = new Date(this.rentalDate + "T00:00:00Z");
-        date.setHours(date.getHours() + 3);
-        const dd = String(date.getDate()).padStart(2, "0");
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const yyyy = date.getFullYear();
-        return `${dd}/${mm}/${yyyy}`;
-      }
-      return null;
-    },
-
-    formattedPrevisionDate() {
-      if (this.previsionDate) {
-        const date = new Date(this.previsionDate + "T00:00:00Z");
-        date.setHours(date.getHours() + 3);
-        const dd = String(date.getDate()).padStart(2, "0");
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const yyyy = date.getFullYear();
-        return `${dd}/${mm}/${yyyy}`;
-      }
-      return null;
-    },
+  mounted() {
+    this.listRentals();
   },
-
   methods: {
     toggleFullText(item, field, maxLength) {
       const fieldValue = field.split(".").reduce((obj, key) => obj[key], item);
 
       if (fieldValue && fieldValue.length > maxLength) {
-        if (this.showFullTextItem[field] === item) {
-          this.$set(this.showFullTextItem, field, null);
+        if (this.modalFormData[field] === item) {
+          this.$set(this.modalFormData, field, null);
         } else {
-          this.$set(this.showFullTextItem, field, item);
+          this.$set(this.modalFormData, field, item);
         }
       }
     },
@@ -436,7 +398,7 @@ export default {
 
     previsionDateMax() {
       const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 28);
+      futureDate.setDate(futureDate.getDate() + 30);
       return futureDate.toISOString().substr(0, 10);
     },
 
@@ -455,11 +417,18 @@ export default {
       }
     },
 
-    formatDate(date) {
+    formatDate(date, useMenuFormat = false) {
       if (!date) return null;
 
-      const formattedDate = new Date(date).toLocaleDateString("pt-BR");
-      return formattedDate;
+      const formattedDate = new Date(
+        useMenuFormat ? date + "T00:00:00Z" : date
+      );
+
+      if (useMenuFormat) {
+        formattedDate.setHours(formattedDate.getHours() + 3);
+      }
+
+      return formattedDate.toLocaleDateString("pt-BR");
     },
 
     parseDate(date) {
@@ -542,8 +511,9 @@ export default {
     },
 
     closeModal() {
-      this.selectedBook = null;
-      (this.selectedUser = null), this.resetValidation();
+      this.modalFormData.bookId = null;
+      this.modalFormData.userId = null;
+      this.resetValidation();
       this.Createdialog = false;
       this.dialogReturn = false;
     },
@@ -556,8 +526,8 @@ export default {
       ) {
         this.$refs.form.resetValidation();
       }
-      this.rentalDate = this.todayDate();
-      this.previsionDate = this.previsionDateMax();
+      this.modalFormData.rentalDate = this.todayDate();
+      this.modalFormData.previsionDate = this.previsionDateMax();
       this.isSubmitDisabled = true;
       this.Createdialog = true;
     },
@@ -571,17 +541,14 @@ export default {
         }
         try {
           const newRental = {
-            bookId: this.selectedBook,
-            userId: this.selectedUser,
-            rentalDate: this.rentalDate,
-            previsionDate: this.previsionDate,
+            bookId: this.modalFormData.bookId,
+            userId: this.modalFormData.userId,
+            rentalDate: this.modalFormData.rentalDate,
+            previsionDate: this.modalFormData.previsionDate,
           };
-
           await Rentals.create(newRental);
-
           this.listRentals();
           this.closeModal();
-
           Swal.fire({
             icon: "success",
             title: "Aluguel adicionado com Sucesso!",
@@ -605,6 +572,8 @@ export default {
         }
       }
     },
+
+    /* MODAL STRUCTURE */
     async openConfirmationModal(title, message) {
       const result = await Swal.fire({
         icon: "warning",
@@ -625,7 +594,7 @@ export default {
       this.selectedReantalId = rental.id;
 
       const confirmed = await this.openConfirmationModal(
-        `Deseja devolver o do Livro: </br> ${rental.book.name} ?`,
+        `Deseja devolver o livro: ${rental.book.name} ?`,
         "Confirma a devolução do aluguel?"
       );
 
@@ -638,16 +607,16 @@ export default {
             icon: "success",
             title: "Livro Devolvido com Sucesso!",
             showConfirmButton: false,
+            timer: 3000,
             toast: true,
             position: "top-end",
-            timer: 3000,
             timerProgressBar: true,
           });
         } catch (error) {
-          await Swal.fire({
+          Swal.fire({
             icon: "info",
             title: "Livro não Devolvido",
-            text: error.response.errors,
+            text: error.response.data.errors,
             showConfirmButton: false,
             toast: true,
             position: "top-end",
