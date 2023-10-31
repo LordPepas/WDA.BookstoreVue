@@ -252,9 +252,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalItems > 10) {
-        return [5, 10, this.totalItems];
+        return [5, 10, 25, this.totalItems];
       } else {
-        return [5, 10];
+        return [5, 10, 25];
       }
     },
 

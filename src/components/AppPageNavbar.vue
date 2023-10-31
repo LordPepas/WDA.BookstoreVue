@@ -63,7 +63,7 @@ export default {
       { icon: "mdi-bookshelf", text: "Livros", route: "/BooksView" },
       {
         icon: "mdi-calendar-text-outline",
-        text: "Alugueis",
+        text: "Aluguéis",
         route: "/RentalsView",
       },
     ],

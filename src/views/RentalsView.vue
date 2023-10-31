@@ -42,6 +42,15 @@
         </v-tooltip>
       </template>
 
+      <!-- <template v-slot:[`item.book.name`]="{ item }">
+        <div @click="toggleFullText(item, 'book.name', 16)">
+          {{
+            modalFormData["book.name"] === item
+              ? item.book.name
+              : truncateText(item.book.name, 16)
+          }}
+        </div>
+      </template> -->
       <template v-slot:[`item.user.name`]="{ item }">
         <div @click="toggleFullText(item, 'user.name', 16)">
           {{
@@ -489,9 +498,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [5, 10, this.totalPages];
+        return [5, 10, 25, this.totalPages];
       } else {
-        return [5, 10];
+        return [5, 10, 25];
       }
     },
 

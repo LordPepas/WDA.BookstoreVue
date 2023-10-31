@@ -317,9 +317,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [5, 10, this.totalPages];
+        return [5, 10, 25, this.totalPages];
       } else {
-        return [5, 10];
+        return [5, 10, 25];
       }
     },
 
@@ -371,7 +371,7 @@ export default {
       this.isSubmitDisabled = true;
       this.submitButtonLabel = "Atualizar";
     },
-    
+
     async submitAction() {
       if (this.$refs.form && typeof this.$refs.form.validate === "function") {
         const isFormValid = await this.$refs.form.validate();

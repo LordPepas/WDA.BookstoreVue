@@ -256,6 +256,14 @@ export default {
       releaseRules: [
         (v) => !!v || "O lançamento é obrigatório",
         (v) => /^\d{4}$/.test(v) || "Formato de data inválido (YYYY)",
+        (v) => {
+          const currentYear = new Date().getFullYear();
+          const releaseYear = parseInt(v, 10);
+          return (
+            releaseYear <= currentYear ||
+            "O ano de lançamento deve ser igual ou inferior ao ano atual"
+          );
+        },
       ],
       quantityRules: [
         (v) => !!v || "A quantidade é obrigatório",
@@ -334,9 +342,9 @@ export default {
 
     generateItemsPerPageOptions() {
       if (this.totalPages > 25) {
-        return [5, 10, this.totalPages];
+        return [5, 10, 25, this.totalPages];
       } else {
-        return [5, 10];
+        return [5, 10, 25];
       }
     },
 
@@ -354,8 +362,7 @@ export default {
     },
 
     closeModal() {
-      this.selectedBookId = null,
-      this.modalFormData.name = "";
+      (this.selectedBookId = null), (this.modalFormData.name = "");
       this.modalFormData.author = "";
       this.modalFormData.publisherId = "";
       this.modalFormData.release = "";
