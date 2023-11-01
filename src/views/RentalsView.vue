@@ -24,25 +24,6 @@
       :no-data-text="noDataText"
     >
       <template v-slot:[`item.book.name`]="{ item }">
-        <v-tooltip bottom nudge-left>
-          <template v-slot:activator="{ on }">
-            <div @click="toggleFullText(item, 'book.name', 16)" v-on="on">
-              {{
-                modalFormData["book.name"] === item
-                  ? item.book.name
-                  : truncateText(item.book.name, 16)
-              }}
-            </div>
-          </template>
-          <span>{{
-            modalFormData["book.name"] === item
-              ? "Mostrar Menos"
-              : "Mostrar Mais"
-          }}</span>
-        </v-tooltip>
-      </template>
-
-      <!-- <template v-slot:[`item.book.name`]="{ item }">
         <div @click="toggleFullText(item, 'book.name', 16)">
           {{
             modalFormData["book.name"] === item
@@ -50,7 +31,8 @@
               : truncateText(item.book.name, 16)
           }}
         </div>
-      </template> -->
+      </template>
+
       <template v-slot:[`item.user.name`]="{ item }">
         <div @click="toggleFullText(item, 'user.name', 16)">
           {{
@@ -60,6 +42,7 @@
           }}
         </div>
       </template>
+
       <template v-slot:[`item.rentalDate`]="{ item }">
         {{ formatDate(item.rentalDate) }}
       </template>
@@ -406,7 +389,7 @@ export default {
     },
 
     previsionDateMax() {
-      const futureDate = new Date();
+      const futureDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
       futureDate.setDate(futureDate.getDate() + 30);
       return futureDate.toISOString().substr(0, 10);
     },
@@ -552,7 +535,6 @@ export default {
           const newRental = {
             bookId: this.modalFormData.bookId,
             userId: this.modalFormData.userId,
-            rentalDate: this.modalFormData.rentalDate,
             previsionDate: this.modalFormData.previsionDate,
           };
           await Rentals.create(newRental);
@@ -571,7 +553,7 @@ export default {
           Swal.fire({
             icon: "error",
             title: "Erro ao adicionar Aluguel",
-            text: error.response.data.error,
+            text: error.response.data.errors,
             showConfirmButton: false,
             toast: true,
             position: "top-end",
