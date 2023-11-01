@@ -144,39 +144,16 @@
                 required
                 no-data-text="Nenhuma usuario encontrado"
               ></v-autocomplete>
-
-              <v-menu
-                ref="menuRental"
-                v-model="menuRental"
-                :close-on-content-click="false"
-                transition="scale-transition"
-                offset-y
-                max-width="290px"
-                min-width="auto"
-              >
-                <template v-slot:activator="{ on, attrs }">
-                  <v-text-field
-                    disabled
-                    v-model="formattedRentalDate"
-                    label="Data de aluguel"
-                    hint="DD/MM/YYYY format"
-                    :rules="dateFormattedRules"
-                    persistent-hint
-                    append-icon="mdi-calendar"
-                    @blur="formatDate(modalFormData.rentalDate)"
-                    v-bind="attrs"
-                    v-on="on"
-                    readonly
-                  ></v-text-field>
-                </template>
-                <v-date-picker
-                  v-model="modalFormData.rentalDate"
-                  no-title
-                  @input="menuRental = false"
-                  :min="todayDate()"
-                  :max="todayDate()"
-                ></v-date-picker>
-              </v-menu>
+              <v-text-field
+                disabled
+                v-model="modalFormData.formattedRentalDate"
+                label="Data de aluguel"
+                hint="DD/MM/YYYY format"
+                :rules="dateFormattedRules"
+                persistent-hint
+                append-icon="mdi-calendar"
+                readonly
+              ></v-text-field>
               <v-menu
                 ref="menuPrevision"
                 v-model="menuPrevision"
@@ -330,17 +307,13 @@ export default {
         book: {
           name: null,
         },
-        rentalDate: "",
+        formattedRentalDate: "",
         previsionDate: "",
       },
-      menuRental: "",
       menuPrevision: "",
     };
   },
   computed: {
-    formattedRentalDate() {
-      return this.formatDate(this.modalFormData.rentalDate, true);
-    },
     formattedPrevisionDate() {
       return this.formatDate(this.modalFormData.previsionDate, true);
     },
@@ -395,7 +368,7 @@ export default {
     },
 
     todayDate() {
-      const brazilCurrentDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const brazilCurrentDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
       return brazilCurrentDate.toISOString().substr(0, 10);
     },
 
@@ -518,7 +491,10 @@ export default {
       ) {
         this.$refs.form.resetValidation();
       }
-      this.modalFormData.rentalDate = this.todayDate();
+      this.modalFormData.formattedRentalDate = this.formatDate(
+        this.todayDate(),
+        true
+      );
       this.modalFormData.previsionDate = this.previsionDateMax();
       this.isSubmitDisabled = true;
       this.Createdialog = true;
