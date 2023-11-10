@@ -212,6 +212,20 @@ export default {
   text-align: center;
 }
 
+@media (max-width: 1760px) {
+  .card-graph {
+    width: 380px;
+  }
+
+  .card-graph-two {
+    width: 280px;
+  }
+
+  .lastRental {
+    height: 100px;
+  }
+}
+
 @media (max-width: 1460px) {
   .card-graph {
     width: 380px;
