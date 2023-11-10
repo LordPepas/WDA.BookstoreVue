@@ -39,6 +39,9 @@ export default {
 </script>
 
 <style>
+*{
+  font-family: 'Roboto', sans-serif;
+}
 .crud {
   width: 75vw;
   margin: auto;

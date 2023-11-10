@@ -266,10 +266,15 @@ export default {
         },
       ],
       quantityRules: [
-        (v) => !!v || "A quantidade é obrigatório",
-        (v) => v >= 0 || "A quantidade nao deve ser menor que um",
-        (v) => v <= 100 || "A quantidade deve ser menor que cem",
+        (v) => !!v || "A quantidade é obrigatória",
+        (v) => {
+          if (this.selectedBookId !== null) {
+            return true;
+          }
+          return v > 0|| "A quantidade deve ser maior que 0";
+        },
       ],
+
       modalFormData: {
         name: null,
         author: null,
@@ -393,7 +398,9 @@ export default {
       this.modalFormData.author = book.author;
       this.modalFormData.publisherId = book.publisherId;
       this.modalFormData.release = book.release;
-      this.modalFormData.quantity = book.quantity;
+      this.modalFormData.quantity = book.quantity.toString();
+
+      console.log(this.modalFormData.quantity)
       this.submitButtonLabel = "Atualizar";
     },
 

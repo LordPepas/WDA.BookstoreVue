@@ -212,43 +212,31 @@ export default {
   text-align: center;
 }
 
-.mt {
-  margin-top: 40px;
-}
-
 @media (max-width: 1460px) {
   .card-graph {
-    width: 440px;
+    width: 380px;
   }
 
   .card-graph-two {
-    width: 340px;
+    width: 280px;
   }
 
   .lastRental {
     height: 100px;
   }
-
-  .mt {
-    margin-top: 28px;
-  }
 }
 
 @media (max-width: 1300px) {
   .card-graph {
-    width: 390px;
+    width: 360px;
   }
 
   .card-graph-two {
-    width: 290px;
+    width: 260px;
   }
 
   .lastRental {
     height: 90px;
-  }
-
-  .mt {
-    margin-top: 18px;
   }
 }
 
@@ -264,10 +252,6 @@ export default {
   .lastRental {
     height: 90px;
   }
-
-  .mt {
-    margin-top: 18px;
-  }
 }
 
 @media (max-width: 500px) {
@@ -277,10 +261,6 @@ export default {
 
   .lastRental {
     height: 120px;
-  }
-
-  .mt {
-    margin-top: 32px;
   }
 }
 </style>
